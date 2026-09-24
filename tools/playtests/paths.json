@@ -1,0 +1,68 @@
+[
+{
+"wait": 6000
+},
+{
+"click": "[data-a=new]"
+},
+{
+"click": "[data-a=go]"
+},
+{
+"wait": 1500
+},
+{
+"eval": "(async()=>{const g=__game; window.tick=()=>new Promise(r=>setTimeout(r,0)); window.clear=async()=>{ for(let i=0;i<80 && (g.ui.dialogOpen||g.cutscene||g.transitioning);i++){ const c=document.querySelector('#dialog .choices .btn'); if(c && !g.ui.typing){c.click();} else g.ui.advance(); g.debugStep(0.15); await tick(); } }; window.auto=async(p, choice=0)=>{ let done=false; p.then(()=>done=true); for(let i=0;i<80&&!done;i++){ await tick(); const cs=document.querySelectorAll('#dialog .choices .btn'); if(cs.length && !g.ui.typing){cs[Math.min(choice, cs.length-1)].click();} else g.ui.advance(); g.debugStep(0.1);} await clear(); }; await clear(); return 'ready';})()"
+},
+{
+"eval": "(async()=>{const g=__game,s=g.state; s.coins=500; s.rep=10; Object.assign(s.storage.workshop,{driftwood:20,wool:6,cloth:3,twine:5,feather:6,pebble:6,seaglass:3,flower:3,moss:2,starshard:1}); g.menus.upgrades(); const b=[...document.querySelectorAll('.modal .btn.primary')]; b[0].click(); await tick(); const after=JSON.stringify(s.upgrades); g.ui.closeModal(); g.menus.ledger('renovate'); await tick(); const rb=document.querySelector('.modal .row .btn.primary'); rb && rb.click(); g.ui.closeModal(); return JSON.stringify({up: after, renovating: s.renovating, coins: s.coins});})()"
+},
+{
+"eval": "(async()=>{const g=__game,s=g.state; s.storage.workshop.decor_rug=1; g.menus.decorate(0); await tick(); document.querySelector('.modal .cell').click(); await tick(); g.debugStep(0.5); return JSON.stringify({decor: s.rooms[0].decor, modal: !!g.ui.modal});})()"
+},
+{
+"eval": "(async()=>{const g=__game,s=g.state; g.ui.closeModal(); g.exitHotel(); g.debugStep(1.5); await clear(); s.time=21*60; g.spawnStar(); g.debugStep(3); const st=g.stars[0]; const w=g.world.witch; w.place(st.x, st.z+0.5); g.debugStep(0.3); const lbl=g.current&&g.current.label; await auto(g.interact()); return JSON.stringify({lbl, star: s.satchel.find(x=>x.id==='starshard'), stars: g.stars.map(x=>x.taken)});})()"
+},
+{
+"eval": "(async()=>{const g=__game,s=g.state; s.events.balloon={x:45,z:45}; g.setupEvents(); const w=g.world.witch; w.place(40,40); w.startTakeoff(); g.debugStep(2); w.pos.x=g.balloonMesh.position.x; w.pos.z=g.balloonMesh.position.z; g.debugStep(0.2); const got=s.satchel.find(x=>x.id==='balloon'); w.startLanding(); g.debugStep(1.5); w.place(53.5,45.5); g.debugStep(0.3); const lbl=g.current&&g.current.label; await auto(g.interact()); return JSON.stringify({got: !!got, lbl, ev: s.events.balloon, bead: s.satchel.find(x=>x.id==='glassbead')});})()"
+},
+{
+"eval": "(async()=>{const g=__game,s=g.state; const offers=g.jobOffers('aldo'); const j=offers[0]; j.status='carrying'; s.jobs.push(j); s.satchel.push({id:'parcel',n:1,jobId:j.id}); const w=g.world.witch; w.place(j.to.door.x, j.to.door.z+1); w.startTakeoff(); g.debugStep(2); w.vel.set(0,0,0); w.pos.x=j.to.door.x; w.pos.z=j.to.door.z; g.debugStep(0.2); const lbl=g.current&&g.current.label; const c0=s.coins; await g.interact(); for(let i=0;i<40;i++){ g.debugStep(0.1); await new Promise(r=>setTimeout(r,60)); } return JSON.stringify({lbl, status:j.status, coins: s.coins-c0, parcels: s.satchel.filter(x=>x.id==='parcel').length});})()"
+},
+{
+"eval": "(async()=>{const g=__game,s=g.state; const w=g.world.witch; g.skyTimer=0; w.vel.set(3,0,0); g.debugStep(0.2); const l=g.skyLoot[0]; if(!l) return 'noloot'; w.pos.x=l.mesh.position.x; w.pos.z=l.mesh.position.z; const before=s.satchel.length; g.debugStep(0.1); return JSON.stringify({id:l.id, before, after:s.satchel.length});})()"
+},
+{
+"eval": "(async()=>{const g=__game,s=g.state; const w=g.world.witch; w.startLanding(); g.debugStep(1.5); s.satchel.push({id:'brasskey',n:1}); w.place(88.5,62.6); g.debugStep(0.3); const lbl=g.current&&g.current.label; await auto(g.interact()); return JSON.stringify({lbl, opened: s.flags.chestOpened, lamp: s.storage.workshop.decor_lamp});})()"
+},
+{
+"eval": "(async()=>{const g=__game,s=g.state; g.openPause(); await tick(); const q=document.querySelector('[data-q=medium]'); q.click(); await tick(); const saved=document.querySelector('[data-a=save]'); saved.click(); return JSON.stringify({q:g.renderer.quality, pr:g.renderer.pixelRatio});})()"
+},
+{
+"shot": "p_pause"
+},
+{
+"eval": "(async()=>{const g=__game,s=g.state; document.querySelector('[data-a=title]').click(); await tick(); return JSON.stringify({mode:g.mode, title: document.querySelector('#title').style.display});})()"
+},
+{
+"wait": 1500
+},
+{
+"shot": "p_title2"
+},
+{
+"click": "[data-a=continue]"
+},
+{
+"wait": 2500
+},
+{
+"eval": "(async()=>{const g=__game,s=g.state; await clear(); return JSON.stringify({mode:g.mode, stage:g.stage.name, day:s.day, coins:s.coins, up:s.upgrades, satchel:s.satchel.length});})()"
+},
+{
+"shot": "p_continued"
+},
+{
+"eval": "(async()=>{const g=__game,s=g.state; s.time=26*60+1; g.debugStep(0.2); for(let i=0;i<30;i++){g.debugStep(0.1); await tick();} const m=!!g.ui.modal; const txt=document.querySelector('.summary') && document.querySelector('.summary').textContent.slice(0,200); g.ui.closeModal(); for(let i=0;i<20;i++){g.debugStep(0.1); await tick();} return JSON.stringify({m, txt, day:s.day, rooms:s.rooms.map(r=>r.unlocked)});})()"
+}
+]
