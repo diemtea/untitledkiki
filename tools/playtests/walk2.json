@@ -1,0 +1,59 @@
+[
+{
+"wait": 6000
+},
+{
+"click": "[data-a=new]"
+},
+{
+"click": "[data-a=go]"
+},
+{
+"wait": 2000
+},
+{
+"wait": 1500
+},
+{
+"eval": "(async()=>{const g=__game; const tick=()=>new Promise(r=>setTimeout(r,0)); window.clear=async()=>{ for(let i=0;i<60 && (g.ui.dialogOpen||g.cutscene||g.transitioning);i++){ g.ui.advance(); g.debugStep(0.2); await tick(); } return {busy:g.ui.busy, cut:g.cutscene, tr:g.transitioning}; }; window.hold=async(k,s)=>{await clear(); g.input.down.add(k); g.debugStep(s); g.input.down.delete(k); await tick(); return g.stage.witch.pos;}; return JSON.stringify(await clear());})()"
+},
+{
+"eval": "(async()=>{const g=__game; window.hold=(k,s)=>{g.input.down.add(k); g.debugStep(s); g.input.down.delete(k); return g.stage.witch.pos;}; return JSON.stringify(await hold('KeyS',0.6))})()"
+},
+{
+"eval": "const g=__game; JSON.stringify({cur: g.current&&g.current.label})"
+},
+{
+"eval": "const g=__game; g.input.pressedSet.add('KeyE'); g.debugStep(2); JSON.stringify({stage: g.stage.name, pos: g.stage.witch.pos})"
+},
+{
+"eval": "(async()=>{const g=__game; const p=await hold('KeyS',1.5); return JSON.stringify({p, h: g.world.heightAt(p.x,p.z)})})()"
+},
+{
+"eval": "(async()=>{const g=__game; const p=await hold('KeyS',1.5); return JSON.stringify({p, h: g.world.heightAt(p.x,p.z)})})()"
+},
+{
+"shot": "x1"
+},
+{
+"eval": "(async()=>{const g=__game; const p=await hold('KeyS',1.5); return JSON.stringify({p, h: g.world.heightAt(p.x,p.z)})})()"
+},
+{
+"eval": "(async()=>{const g=__game; const p=await hold('KeyA',1.5); return JSON.stringify({p, h: g.world.heightAt(p.x,p.z)})})()"
+},
+{
+"shot": "x2"
+},
+{
+"eval": "(async()=>{const g=__game; g.input.pressedSet.add('KeyF'); g.debugStep(1.5); const p=await hold('KeyS',3); return JSON.stringify({p, mode: g.stage.witch.mode})})()"
+},
+{
+"shot": "x3"
+},
+{
+"eval": "const g=__game; g.input.pressedSet.add('KeyF'); g.debugStep(1.5); JSON.stringify({p: g.stage.witch.pos, mode: g.stage.witch.mode})"
+},
+{
+"shot": "x4"
+}
+]

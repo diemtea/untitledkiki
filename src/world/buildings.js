@@ -443,14 +443,22 @@ export function boat(color) {
   shape.quadraticCurveTo(0.75, -0.6, 0.62, 0.9);
   shape.lineTo(-0.62, 0.9);
   shape.quadraticCurveTo(-0.75, -0.6, 0, -1.4);
-  const hull = new THREE.Mesh(new THREE.ExtrudeGeometry(shape, { depth: 0.5, bevelEnabled: false }), [lambert({ color: '#6a4228' }), lambert({ color })]);
+  const paint = lambert({ color });
+  const hull = new THREE.Mesh(new THREE.ExtrudeGeometry(shape, { depth: 0.5, bevelEnabled: false }), [paint, paint]);
   hull.rotation.x = Math.PI / 2;
   hull.position.y = 0.32;
   hull.castShadow = true;
-  const deck = new THREE.Mesh(new THREE.ShapeGeometry(shape), lambert({ map: woodTex() }));
+  const stripe = new THREE.Mesh(new THREE.ExtrudeGeometry(shape, { depth: 0.1, bevelEnabled: false }), [lambert({ color: '#fff6ec' }), lambert({ color: '#fff6ec' })]);
+  stripe.rotation.x = Math.PI / 2;
+  stripe.position.y = 0.1;
+  stripe.scale.set(1.02, 1.02, 1);
+  const deckTex = woodTex().clone();
+  deckTex.needsUpdate = true;
+  deckTex.repeat.set(0.8, 0.8);
+  const deck = new THREE.Mesh(new THREE.ShapeGeometry(shape), lambert({ map: deckTex }));
   deck.rotation.x = -Math.PI / 2;
-  deck.position.y = 0.26;
-  deck.scale.set(0.85, 0.85, 1);
+  deck.position.y = 0.335;
+  deck.scale.set(0.82, 0.82, 1);
   const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 2.4, 5), lambert({ color: '#6a4228' }));
   mast.position.set(0, 1.4, 0.2);
   mast.castShadow = true;
@@ -460,7 +468,7 @@ export function boat(color) {
   const sail = new THREE.Mesh(sailGeo, lambert({ color: '#fff6ec', side: THREE.DoubleSide }));
   sail.position.set(0.05, 0.2, 0.2);
   sail.castShadow = true;
-  g.add(hull, deck, mast, sail);
+  g.add(hull, stripe, deck, mast, sail);
   return g;
 }
 

@@ -712,6 +712,7 @@ export class Menus {
           <label style="display:block;margin:6px 0">Sound <input type="range" min="0" max="1" step="0.05" value="${s.settings.sfx}" data-k="sfx" style="width:100%"></label>
           <div style="margin:8px 0">Graphics:
             <button class="btn small ${s.settings.quality === 'high' ? 'on' : ''}" data-q="high">Pretty</button>
+            <button class="btn small ${s.settings.quality === 'medium' ? 'on' : ''}" data-q="medium">Balanced</button>
             <button class="btn small ${s.settings.quality === 'low' ? 'on' : ''}" data-q="low">Fast</button></div>
           <div style="display:flex;gap:6px;margin-top:12px;flex-wrap:wrap">
             <button class="btn primary" data-a="resume">Resume</button>
@@ -738,7 +739,9 @@ export class Menus {
     }));
     body.querySelectorAll('[data-q]').forEach((b) => b.addEventListener('click', () => {
       s.settings.quality = b.dataset.q;
+      s.settings.qualityLocked = true;
       g.renderer.setQuality(b.dataset.q);
+      g.onResize();
       body.querySelectorAll('[data-q]').forEach((x) => x.classList.toggle('on', x === b));
     }));
     body.querySelector('[data-a=resume]').onclick = () => this.ui.closeModal();

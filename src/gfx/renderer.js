@@ -144,7 +144,7 @@ export class Renderer {
     gl.autoClear = true;
     this.gl = gl;
     this.quality = 'high';
-    this.pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
+    this.pixelRatio = Math.min(window.devicePixelRatio || 1, 1.5);
 
     this.quadCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
     this.quadScene = new THREE.Scene();
@@ -174,10 +174,12 @@ export class Renderer {
     window.addEventListener('resize', () => this.resize());
   }
 
+  // high: full effects at up to 1.5x DPR · medium: full effects at 1x · low: no DOF/bloom/shadows
   setQuality(q) {
     this.quality = q;
-    this.pixelRatio = q === 'low' ? 1 : Math.min(window.devicePixelRatio || 1, 2);
+    this.pixelRatio = q === 'high' ? Math.min(window.devicePixelRatio || 1, 1.5) : q === 'medium' ? 1 : Math.min(1, window.devicePixelRatio || 1) * 0.85;
     this.gl.shadowMap.enabled = q !== 'low';
+    this.gl.shadowMap.needsUpdate = true;
     this.resize();
   }
 

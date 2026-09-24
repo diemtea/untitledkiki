@@ -8,7 +8,7 @@ import { createSky, createClouds } from '../gfx/sky.js';
 import { SpriteBatch } from '../gfx/batch.js';
 import { Particles } from '../gfx/particles.js';
 import { Billboard } from '../gfx/billboard.js';
-import { treeCanvas, nodeCanvas, npcCanvas, NPC_LOOKS, tuftCanvas, rockCanvas, sheepCanvas, chickenCanvas, gullCanvas, sootSheet, petCanvas, randomOwnerLook, itemCanvas, iconCanvas } from '../gfx/sprites.js';
+import { butterflyCanvas, treeCanvas, nodeCanvas, npcCanvas, NPC_LOOKS, tuftCanvas, rockCanvas, sheepCanvas, chickenCanvas, gullCanvas, sootSheet, petCanvas, randomOwnerLook, itemCanvas, iconCanvas } from '../gfx/sprites.js';
 import { buildBuilding, glowMaterials, lampPost, bench, barrel, crate, flowerPotCanvas, stall, fountain, windmill, lighthouse, boat, fence, signpost, launchpad } from './buildings.js';
 import { Witch, CRUISE_Y } from '../entities/witch.js';
 import { Actor } from '../entities/actor.js';
@@ -155,6 +155,17 @@ export class Overworld {
       this.scene.add(bb.mesh);
       this.gulls.push(bb);
     }
+
+    // --- butterflies drifting over meadows and gardens (daytime only)
+    this.butterflies = [];
+    const bfSpots = [[76, 30], [70, 26], [84, 22], [42, 20], [58, 20], [30, 50], [62, 36], [20, 44]];
+    bfSpots.forEach(([x, z], i) => {
+      const col = ['#fff6e4', '#f5d24b', '#f7a8c0', '#8ecae6', '#f08a3a'][i % 5];
+      const bb = new Billboard([butterflyCanvas(0, col), butterflyCanvas(1, col)], { key: 'bfly' + col, shadow: false });
+      bb.mesh.userData = { hx: x, hz: z, ph: i * 1.9, y: levelY(I.height[I.idx(x, z)]) };
+      this.scene.add(bb.mesh);
+      this.butterflies.push(bb);
+    });
 
     // --- townsfolk
     this.npcs = {};
@@ -392,6 +403,13 @@ export class Overworld {
       g.mesh.position.set(u.cx + Math.cos(a) * u.r, u.y + Math.sin(t * 1.3 + u.ph) * 0.4, u.cz + Math.sin(a) * u.r * 0.6);
       g.setFrame(Math.floor(t * 3 + u.ph) % 2, Math.sin(a) > 0);
     }
+    for (const b of this.butterflies) {
+      const u = b.mesh.userData;
+      const a = t * 0.45 + u.ph;
+      b.mesh.visible = !S.isNight && !(weather.rain > 0);
+      b.mesh.position.set(u.hx + Math.sin(a) * 2.2 + Math.sin(a * 2.3) * 0.6, u.y + 0.8 + Math.abs(Math.sin(t * 3 + u.ph)) * 0.5, u.hz + Math.cos(a * 0.8) * 1.6);
+      b.setFrame(Math.floor(t * 10 + u.ph) % 2, Math.cos(a) < 0);
+    }
     // windmill, lighthouse, boats, clock
     if (this.windmillHub) this.windmillHub.rotation.z -= dt * (0.5 + (weather.wind || 0) * 0.8);
     if (this.lighthouse) {
@@ -459,7 +477,7 @@ export class Overworld {
     if (R() < dt * 3) {
       const bs = this.I.buildings;
       const b = bs[Math.floor(R() * bs.length)];
-      const inFront = b.z > this.witch.pos.z + 1.5 && !this.witch.flying;
+      const inFront = b.z + b.d > this.witch.pos.z - 2 && !this.witch.flying;
       if ((b.kind === 'house' || b.kind === 'shop' || b.kind === 'hotel') && !inFront) {
         const x = b.x + b.w / 2 + (R() - 0.5), z = b.z + b.d * 0.3;
         this.fx.spawn({ x, y: levelY(b.base) + b.h + 1.9, z, vx: 0.35, vy: 0.5, life: 3.5, size: 0.34, color: S.isNight ? '#6a6a88' : '#e8e4e0', alpha: 0.45, wobble: 0.3, fadeIn: 0.2, shape: 3 });
@@ -543,13 +561,17 @@ export class Overworld {
     const w = this.witch;
     this.playerLight.position.set(w.pos.x, w.pos.y + 1.4, w.pos.z + 0.8);
     this.playerLight.intensity = S.night > 0.4 ? 2.2 * S.night : 0;
-    if (!S.lampOn) { for (const l of this.lampLights) l.intensity = 0; return; }
-    const sorted = this.lamps.map((l) => ({ l, d: dist(l.pos.x, l.pos.z, f.x, f.z) })).sort((a, b) => a.d - b.d);
+    // candidates: street lamps after dusk + glowing things (fallen stars) handed in by the game
+    const cands = [];
+    if (S.lampOn) for (const l of this.lamps) cands.push({ pos: l.pos, color: '#ffb45a', power: 7, d: dist(l.pos.x, l.pos.z, f.x, f.z) });
+    for (const g of this.glowSpots || []) cands.push({ pos: g.pos, color: g.color, power: g.power, d: dist(g.pos.x, g.pos.z, f.x, f.z) - 6 });
+    cands.sort((a, b) => a.d - b.d);
     this.lampLights.forEach((pl, i) => {
-      const s = sorted[i];
+      const s = cands[i];
       if (!s || s.d > 26) { pl.intensity = 0; return; }
-      pl.position.copy(s.l.pos);
-      pl.intensity = 7 * clamp(1.4 - s.d / 20, 0, 1);
+      pl.position.copy(s.pos);
+      pl.color.set(s.color);
+      pl.intensity = s.power * clamp(1.4 - Math.max(0, s.d) / 20, 0, 1);
     });
   }
 
@@ -557,7 +579,7 @@ export class Overworld {
     const w = this.witch;
     const fly = w.mode === 'fly' || w.mode === 'takeoff';
     const c = this.cam;
-    const tgtDist = fly ? 32 : 20;
+    const tgtDist = fly ? 27 : 20;
     const tgtPitch = fly ? 0.86 : 0.6;
     c.dist = damp(c.dist, tgtDist, 2.2, dt);
     c.pitch = damp(c.pitch, tgtPitch, 2.2, dt);
@@ -590,7 +612,7 @@ export class Overworld {
   snapCamera() {
     const w = this.witch;
     this.cam.target.set(w.pos.x, w.pos.y + 0.9, w.pos.z);
-    this.cam.dist = w.flying ? 32 : 20;
+    this.cam.dist = w.flying ? 27 : 20;
     this.cam.pitch = w.flying ? 0.86 : 0.6;
     this.trail.length = 0;
     this.soot.pos.set(w.pos.x - 0.7, w.pos.y, w.pos.z + 0.2);

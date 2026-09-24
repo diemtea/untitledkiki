@@ -10,7 +10,7 @@ const K = [
   { h: 7.5, top: '#6aaee0', hor: '#ffe0c0', sun: '#ffe0b0', si: 1.6, hs: '#b8d4f0', hg: '#8a8060', hi: 0.8, fog: '#f0e0d0', tint: [1.02, 0.99, 0.95], lift: [0.01, 0.01, 0.0], sat: 1.06, stars: 0, glow: 0.0 },
   { h: 12, top: '#4a9ee0', hor: '#d0ecf8', sun: '#fff6e0', si: 2.0, hs: '#c8e4f8', hg: '#8a9a60', hi: 0.85, fog: '#d8ecf4', tint: [1.0, 1.0, 1.0], lift: [0.0, 0.0, 0.0], sat: 1.08, stars: 0, glow: 0.0 },
   { h: 16, top: '#4a9ad8', hor: '#e8ecd8', sun: '#fff0d0', si: 1.9, hs: '#c8e0f0', hg: '#8a9060', hi: 0.8, fog: '#e4ecdc', tint: [1.02, 1.0, 0.96], lift: [0.0, 0.0, 0.0], sat: 1.08, stars: 0, glow: 0.0 },
-  { h: 18.3, top: '#6a88c8', hor: '#ffc080', sun: '#ffb060', si: 1.5, hs: '#e0b8b0', hg: '#7a6050', hi: 0.75, fog: '#f4c8a0', tint: [1.08, 0.95, 0.85], lift: [0.03, 0.01, 0.0], sat: 1.12, stars: 0, glow: 0.4 },
+  { h: 18.3, top: '#6a88c8', hor: '#ffc080', sun: '#ffb060', si: 1.5, hs: '#e0b8b0', hg: '#7a6050', hi: 0.75, fog: '#f4c8a0', tint: [1.05, 0.96, 0.88], lift: [0.03, 0.01, 0.01], sat: 1.08, stars: 0, glow: 0.4 },
   { h: 19.6, top: '#4a5a98', hor: '#f0a080', sun: '#ff9a60', si: 0.8, hs: '#b0a0b8', hg: '#4a3a50', hi: 0.72, fog: '#c8949a', tint: [1.0, 0.9, 0.9], lift: [0.02, 0.01, 0.03], sat: 1.04, stars: 0.3, glow: 1.2 },
   { h: 21, top: '#1a2450', hor: '#4a4a80', sun: '#8aa4e8', si: 0.4, hs: '#4a5a9a', hg: '#1e1e36', hi: 0.6, fog: '#2e3860', tint: [0.75, 0.8, 1.0], lift: [0.02, 0.02, 0.06], sat: 0.88, stars: 0.9, glow: 1.6 },
   { h: 24, top: '#0f1a3a', hor: '#2a3a6a', sun: '#8aa4e8', si: 0.35, hs: '#3a4a8a', hg: '#1a1a30', hi: 0.55, fog: '#1e2a50', tint: [0.72, 0.78, 1.0], lift: [0.02, 0.02, 0.06], sat: 0.85, stars: 1, glow: 1.6 },

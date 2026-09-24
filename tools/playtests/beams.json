@@ -1,0 +1,12 @@
+[
+ {"wait": 6000},
+ {"click": "[data-a=new]"},
+ {"click": "[data-a=go]"},
+ {"wait": 1500},
+ {"eval": "(async()=>{const g=__game; const tick=()=>new Promise(r=>setTimeout(r,0)); for(let i=0;i<60 && (g.ui.dialogOpen||g.cutscene||g.transitioning);i++){ g.ui.advance(); g.debugStep(0.2); await tick(); } g.state.time=10*60; const w=g.hotel.witch; w.place(26,9); g.hotel.snapCamera(); g.debugStep(1); return 'ok';})()"},
+ {"wait": 1500},
+ {"shot": "z1_beams"},
+ {"eval": "(async()=>{const g=__game; g.exitHotel(); g.debugStep(1.5); const w=g.world.witch; w.place(74,31); g.world.snapCamera(); g.debugStep(1); return 'ok';})()"},
+ {"wait": 1500},
+ {"shot": "z2_meadow"}
+]

@@ -1,0 +1,16 @@
+[
+ {"wait": 6000},
+ {"shot": "m0_title"},
+ {"click": "[data-a=new]"},
+ {"click": "[data-a=go]"},
+ {"wait": 1500},
+ {"eval": "(async()=>{const g=__game; const tick=()=>new Promise(r=>setTimeout(r,0)); for(let i=0;i<3 && (g.ui.dialogOpen||g.cutscene||g.transitioning);i++){ g.ui.advance(); g.debugStep(0.2); await tick(); } return 'ok';})()"},
+ {"wait": 1000},
+ {"shot": "m1_dialog"},
+ {"eval": "(async()=>{const g=__game; const tick=()=>new Promise(r=>setTimeout(r,0)); for(let i=0;i<60 && (g.ui.dialogOpen||g.cutscene||g.transitioning);i++){ g.ui.advance(); g.debugStep(0.2); await tick(); } g.exitHotel(); g.debugStep(1.5); return 'ok';})()"},
+ {"wait": 1500},
+ {"shot": "m2_world"},
+ {"eval": "__game.menus.bag(); 'bag'"},
+ {"wait": 800},
+ {"shot": "m3_bag"}
+]

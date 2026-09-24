@@ -1003,3 +1003,14 @@ export function nodeCanvas(visual, seed = 1) {
     default: return itemCanvas(visual);
   }
 }
+
+export function butterflyCanvas(frame, color) {
+  return cached(`bfly:${frame}:${color}`, () => {
+    const c = makeCanvas(7, 5), g = ctx2d(c);
+    const dark = shadeHex(color, 0.7);
+    if (frame === 0) { rect(g, 0, 0, 3, 3, color); rect(g, 4, 0, 3, 3, color); px(g, 1, 3, dark); px(g, 5, 3, dark); }
+    else { rect(g, 1, 1, 2, 2, color); rect(g, 4, 1, 2, 2, color); }
+    rect(g, 3, 1, 1, 3, '#3a2a30');
+    return c;
+  });
+}

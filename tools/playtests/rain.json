@@ -1,0 +1,12 @@
+[
+ {"wait": 6000},
+ {"click": "[data-a=new]"},
+ {"click": "[data-a=go]"},
+ {"wait": 1500},
+ {"eval": "(async()=>{const g=__game; const tick=()=>new Promise(r=>setTimeout(r,0)); for(let i=0;i<60 && (g.ui.dialogOpen||g.cutscene||g.transitioning);i++){ g.ui.advance(); g.debugStep(0.2); await tick(); } g.state.weather={kind:'rain',cloud:1,rain:1,wind:0.6}; g.exitHotel(); g.debugStep(1.5); const w=g.world.witch; w.place(51, 62.5); g.world.snapCamera(); g.debugStep(1); return 'ok';})()"},
+ {"wait": 1500},
+ {"shot": "y1_rain"},
+ {"eval": "(async()=>{const g=__game; g.state.weather={kind:'sunny',cloud:0,rain:0,wind:0.2}; const w=g.world.witch; w.place(50,40); w.startTakeoff(); g.debugStep(3); w.vel.set(0,0,0); g.state.time=18.4*60; g.debugStep(1.5); return 'ok';})()"},
+ {"wait": 1500},
+ {"shot": "y2_flysunset"}
+]

@@ -252,3 +252,20 @@ kbd {
   .table-top { height: 200px; }
   .loot { width: 46px; height: 46px; }
 }
+
+/* touch & small-screen tweaks */
+body.talking #touch { visibility: hidden !important; }
+@media (pointer: coarse) {
+  #hud-buttons kbd, #hud-prompt kbd { display: none; }
+  #hud-buttons .btn[data-k=bag], #hud-buttons .btn[data-k=menu] { display: none; }
+  #tbtns { grid-template-columns: 62px 62px; gap: 8px; bottom: 70px; }
+  #tbtns .btn { width: 62px; height: 62px; }
+  #joy { bottom: 70px; }
+}
+@media (max-height: 520px) {
+  #hud-tasks { display: none; }
+  #toasts { top: 60px; }
+  #dialog .box { min-height: 96px; }
+  .modal { max-height: calc(100% - 12px); }
+}
+.btn.on { background: var(--navy); color: #fff6e4; border-color: #151a33; box-shadow: inset 0 -3px 0 #1e2548, 0 3px 0 var(--shadow); }

@@ -82,6 +82,7 @@ export class UI {
     this.buttons.id = 'hud-buttons';
     const mk = (label, key, fn) => {
       const b = el('button', 'btn', `<kbd>${key}</kbd><span>${label}</span>`);
+      b.dataset.k = label.toLowerCase();
       b.addEventListener('click', (e) => { e.stopPropagation(); fn(); });
       this.buttons.appendChild(b);
       return b;
@@ -109,6 +110,7 @@ export class UI {
 
   updateHUD(g) {
     const s = g.state;
+    this.set('talking', this.dialogOpen || !!this.modal, (v) => document.body.classList.toggle('talking', v));
     const hour = s.time / 60;
     const night = hour < 6 || hour >= 20;
     this.set('sun', night, (v) => (this.clockPanel.querySelector('.sunmoon').src = iconURL(v ? 'icon:moon' : 'icon:sun')));

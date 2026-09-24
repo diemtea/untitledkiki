@@ -26,6 +26,7 @@ const REP_FOR_STARS = [0, 0, 1, 2, 3, 5];
 export class Game {
   constructor(canvas, uiRoot) {
     this.canvas = canvas;
+    this.isTouch = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
     this.uiRoot = uiRoot;
     this.t = 0;
     this.mode = 'loading';
@@ -138,7 +139,10 @@ export class Game {
 
   // ================================================================== loop
   frame(now) {
-    this.fps = this.fps ? this.fps * 0.95 + (1000 / Math.max(1, now - this.last)) * 0.05 : 30;
+    const ft = Math.min(250, Math.max(1, now - this.last));
+    this.frameMs = this.frameMs ? this.frameMs * 0.95 + ft * 0.05 : 16;
+    this.fps = 1000 / this.frameMs;
+    this.autoQuality(ft);
     const dt = Math.min(0.05, (now - this.last) / 1000 || 0.016);
     this.last = now;
     this.t += dt;
@@ -150,6 +154,23 @@ export class Game {
     this.renderer.render(this.stage.scene, this.stage.camera, this.t);
     this.input.endFrame();
     requestAnimationFrame((t) => this.frame(t));
+  }
+
+  // Step graphics down once if the device clearly struggles (the player can change it in settings).
+  autoQuality(ft) {
+    if (this.mode !== 'play' || document.hidden || this.state.settings.qualityLocked || navigator.webdriver) return;
+    this.slowT = (this.slowT || 0) + (ft > 40 ? ft / 1000 : -ft / 2000);
+    this.slowT = Math.max(0, this.slowT);
+    if (this.slowT > 5) {
+      this.slowT = 0;
+      const q = this.renderer.quality;
+      const next = q === 'high' ? 'medium' : q === 'medium' ? 'low' : null;
+      if (!next) return;
+      this.renderer.setQuality(next);
+      this.state.settings.quality = next;
+      this.onResize();
+      this.ui.toast(`Switched to ${next === 'medium' ? 'balanced' : 'fast'} graphics for smoother play.`, 'icon:sparkle');
+    }
   }
 
   get hour() { return ((this.state.time / 60) % 24 + 24) % 24; }
@@ -207,7 +228,7 @@ export class Game {
     // ---------------------------------------------------------- interaction prompt
     this.current = busy ? null : this.findInteractable();
     if (this.current) this.ui.prompt(`<kbd>E</kbd> ${this.current.label}`);
-    else if (!busy && st === this.world && !st.witch.flying && this.onLaunchpad()) this.ui.prompt(`<kbd>F</kbd> Hop on your broom`);
+    else if (!busy && st === this.world && !st.witch.flying && this.onLaunchpad()) this.ui.prompt(this.isTouch ? 'Tap Fly to hop on your broom' : `<kbd>F</kbd> Hop on your broom`);
     else if (!busy && st === this.world && st.witch.mode === 'fly' && st.witch.outOfBounds) this.ui.prompt(`The sea wind pushes you back…`);
     else this.ui.prompt(null);
 
@@ -331,7 +352,7 @@ export class Game {
       this.world.snapCamera();
       if (!this.state.flags.flyHint) {
         this.state.flags.flyHint = true;
-        setTimeout(() => this.ui.toast('Press F to hop on your broom and fly!', 'gear_bristles', { life: 5 }), 700);
+        setTimeout(() => this.ui.toast(this.isTouch ? 'Tap Fly to hop on your broom!' : 'Press F to hop on your broom and fly!', 'gear_bristles', { life: 5 }), 700);
       }
     });
   }
@@ -655,10 +676,7 @@ export class Game {
       bb.mesh.material = new THREE.MeshBasicMaterial({ map: bb.sheet.tex, alphaTest: 0.5, color: new THREE.Color(2.2, 2.0, 1.4) });
       bb.mesh.position.set(x + 20, y + 40, z - 30);
       w.scene.add(bb.mesh);
-      const light = new THREE.PointLight('#ffe890', 0, 6, 1.5);
-      bb.mesh.add(light);
-      light.position.y = 0.6;
-      const star = { x, z, y, mesh: bb.mesh, light, t: 0, landed: false, taken: false };
+      const star = { x, z, y, mesh: bb.mesh, t: 0, landed: false, taken: false };
       this.stars.push(star);
       this.audio.sfx('star');
       if (this.stage === this.world) this.ui.toast('A star is falling! Look for its glow.', 'icon:star', { life: 4 });
@@ -708,7 +726,6 @@ export class Game {
         if (Math.random() < 0.8) w.glowFx.spawn({ x: st.mesh.position.x, y: st.mesh.position.y + 0.3, z: st.mesh.position.z, life: 0.9, size: 0.22, color: '#fff0a0', shape: 2 });
         if (k >= 1) { st.landed = true; w.glowFx.burst(st.x, st.y + 0.4, st.z, 24, { color: '#ffe890', size: 0.16, life: 1.2, speed: 3, up: 3, gravity: 4, shape: 2 }); }
       } else {
-        st.light.intensity = 3 + Math.sin(this.t * 4) * 1;
         st.mesh.position.y = st.y + 0.15 + Math.sin(this.t * 2) * 0.1;
         if (Math.random() < dt * 6) w.glowFx.spawn({ x: st.x + (Math.random() - 0.5) * 0.4, y: st.y + 0.4, z: st.z, vy: 1.2, life: 1.2, size: 0.14, color: '#fff4c0', shape: 2 });
       }
@@ -762,6 +779,8 @@ export class Game {
       }
       if (hit || l.life <= 0) { w.scene.remove(l.mesh); this.skyLoot.splice(i, 1); }
     }
+    // glowing things borrow lights from the world's light pool
+    this.world.glowSpots = this.stars.filter((st) => !st.taken && st.landed).map((st) => ({ pos: new THREE.Vector3(st.x, st.y + 0.8, st.z), color: '#ffe890', power: 4 + Math.sin(this.t * 4) }));
     // markers
     this.world.setMarkers(this.mapMarkers().filter((m) => m.world));
   }
@@ -1076,7 +1095,7 @@ export class Game {
     await this.ui.say(me, 'Broom & Board — a hotel for pets! Every witch needs a trade in her training year, and this one is mine.');
     await this.ui.say(soot, 'Here’s how it works. Owners write to us. You fly down to Maravik, collect their pets, deliver parcels, and gather whatever you find.');
     await this.ui.say(soot, 'Then you come home, sort your loot, brew treats and keep our guests happy. Happy guests, good reviews. Good reviews, more guests.');
-    await this.ui.say(soot, 'I think I heard the mailbox by the front door. Go on, check it! (Walk with WASD, press E to interact.)');
+    await this.ui.say(soot, this.isTouch ? 'I think I heard the mailbox by the front door. Go on, check it! (Move with the stick, tap Act to interact.)' : 'I think I heard the mailbox by the front door. Go on, check it! (Walk with WASD, press E to interact.)');
     this.cutscene = false;
     this.save();
   }

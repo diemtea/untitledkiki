@@ -1,0 +1,15 @@
+[
+ {"wait": 6000},
+ {"click": "[data-a=new]"},
+ {"click": "[data-a=go]"},
+ {"wait": 1500},
+ {"eval": "(async()=>{const g=__game; window.tick=()=>new Promise(r=>setTimeout(r,0)); window.clear=async()=>{ for(let i=0;i<80 && (g.ui.dialogOpen||g.cutscene||g.transitioning);i++){ const c=document.querySelector('#dialog .choices .btn'); if(c && !g.ui.typing){c.click();} else g.ui.advance(); g.debugStep(0.15); await tick(); } }; window.auto=async(p)=>{ let done=false; p.then(()=>done=true); for(let i=0;i<80&&!done;i++){ await tick(); const c=document.querySelector('#dialog .choices .btn'); if(c && !g.ui.typing){c.click();} else g.ui.advance(); g.debugStep(0.1);} await clear(); }; await clear(); return 'ready';})()"},
+ {"eval": "(async()=>{const g=__game, s=g.state; g.acceptBooking(s.letters[0]); const gu=s.guests[0]; g.exitHotel(); g.debugStep(1.2); await clear(); const w=g.world.witch; w.place(gu.owner.door.x+0.9, gu.owner.door.z+0.9); g.debugStep(0.3); const lbl=g.current&&g.current.label; await auto(g.pickup(gu)); w.place(50.5,26.5); g.debugStep(0.3); g.enterHotel(); g.debugStep(1.5); await clear(); await tick(); await new Promise(r=>setTimeout(r,800)); await clear(); return JSON.stringify({lbl, g: s.guests.map(x=>[x.name,x.status,x.checkout,x.wish&&x.wish.id])});})()"},
+ {"eval": "(async()=>{const g=__game, s=g.state; const gu=s.guests[0]; s.storage.pantry.egg=3; const {actFeed}=await import('/src/game/guests.js'); actFeed(s,gu,'egg'); g.debugStep(20); return JSON.stringify({h:gu.hunger,j:gu.joy,time:s.time, samples:gu.samples});})()"},
+ {"eval": "(async()=>{const g=__game, s=g.state; s.time=23*60; g.endDay(false); for(let i=0;i<30;i++){g.debugStep(0.1); await tick();} const sum=!!g.ui.modal; g.ui.closeModal(); for(let i=0;i<20;i++){g.debugStep(0.1); await tick();} await clear(); return JSON.stringify({sum, day:s.day, time:s.time, letters:s.letters.length, guests:s.guests.map(x=>[x.name,x.status,x.checkout,Math.round(x.hunger),Math.round(x.joy)]), loc: g.stage.name, coins:s.coins, rep:s.rep});})()"},
+ {"shot": "d1_day2"},
+ {"eval": "(async()=>{const g=__game, s=g.state; const gu=s.guests[0]; g.takeGuest(gu,true); g.exitHotel(); g.debugStep(1.2); await clear(); g.debugStep(1); const w=g.world.witch; w.place(gu.owner.door.x+0.9, gu.owner.door.z+0.9); g.markDirty(); g.debugStep(0.5); const lbl=g.current&&g.current.label; await auto(g.returnPet(gu)); return JSON.stringify({lbl, coins:s.coins, rep:s.rep, reviews:s.reviews, status: gu.status});})()"},
+ {"eval": "(async()=>{const g=__game, s=g.state; for (const l of [...s.letters]) if(l.type==='booking') g.acceptBooking(l); return JSON.stringify({guests: s.guests.map(x=>[x.name,x.species,x.status,x.room,x.owner.label]), free: s.rooms.map(r=>r.unlocked)});})()"},
+ {"eval": "(async()=>{const g=__game, s=g.state; const offers=g.jobOffers('aldo'); return JSON.stringify(offers.map(o=>[o.to.label,o.reward,o.status]));})()"},
+ {"shot": "d2_town"}
+]

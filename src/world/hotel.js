@@ -128,6 +128,8 @@ export class Hotel {
     this.messMeshes = [];
     this.decorMeshes = [];
     this.lights = [];
+    this.pool = [];
+    for (let i = 0; i < 6; i++) { const l = new THREE.PointLight('#ffc070', 0, 7, 1.5); this.pool.push(l); this.scene.add(l); }
     this.build();
     this.witch = new Witch(this);
     this.witch.addTo(this.scene);
@@ -204,13 +206,11 @@ export class Hotel {
     this.scene.add(m);
     return m;
   }
+  // Light "spots" are virtual; a small pool of real PointLights follows the camera (cheap shaders).
   pointLight(x, y, z, color = '#ffb866', intensity = 4, range = 7) {
-    const l = new THREE.PointLight(color, intensity, range, 1.5);
-    l.position.set(x, y, z);
-    l.userData.base = intensity;
-    this.scene.add(l);
-    this.lights.push(l);
-    return l;
+    const spot = { pos: new THREE.Vector3(x, y, z), color: new THREE.Color(color), base: intensity, range, visible: true };
+    this.lights.push(spot);
+    return spot;
   }
 
   build() {
@@ -257,7 +257,23 @@ export class Hotel {
     // --- back-wall windows (sky shows through) and wall decor
     this.windows = [];
     const winTex = pixelTexture(ART.window());
+    // soft sunbeams slanting in from each window (additive, only by day)
+    const beamTex = drawTexture(8, 32, (g) => {
+      for (let y = 0; y < 32; y++) { const a = Math.pow(1 - y / 32, 1.4) * 0.55; g.fillStyle = `rgba(255,236,190,${a})`; g.fillRect(0, y, 8, 1); }
+    });
+    beamTex.magFilter = THREE.LinearFilter; beamTex.minFilter = THREE.LinearFilter;
+    this.beamMat = new THREE.MeshBasicMaterial({ map: beamTex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0.5, side: THREE.DoubleSide, fog: false });
+    this.beams = [];
+    const addBeam = (x) => {
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(1.35, 4.2), this.beamMat);
+      m.position.set(x + 0.45, 1.05, 2.45);
+      m.rotation.set(-1.05, 0, -0.18);
+      m.renderOrder = 4;
+      S.add(m);
+      this.beams.push(m);
+    };
     const addWindow = (x, y = 1.9) => {
+      addBeam(x);
       const skyMat = new THREE.MeshBasicMaterial({ color: '#8ecae6' });
       const sky = new THREE.Mesh(new THREE.PlaneGeometry(1.3, 1.3), skyMat);
       sky.position.set(x, y, 1.02);
@@ -528,11 +544,23 @@ export class Hotel {
       this.glowFx.spawn({ x: p.x + (Math.random() - 0.5) * 0.7, y: p.y, z: p.z + (Math.random() - 0.5) * 0.5, vy: 0.6, life: 0.9, size: 0.1, color: '#9aff90', shape: 2, alpha: 0.9 });
     }
     if (Math.random() < dt * 2) this.fx.spawn({ x: 2.4 + (Math.random() - 0.5) * 0.4, y: 1.2, z: 1.6, vy: 0.8, vx: 0.1, life: 1.5, size: 0.14, color: '#8a8090', alpha: 0.4, wobble: 0.3 });
-    for (const l of this.lights) l.intensity = l.userData.base * (0.92 + Math.sin(t * 9 + l.position.x) * 0.04 + Math.random() * 0.04);
+    const f = this.cam.target;
+    const near = this.lights.filter((l) => l.visible).map((l) => ({ l, d: Math.abs(l.pos.x - f.x) + Math.abs(l.pos.z - f.z) * 0.5 })).sort((a, b) => a.d - b.d);
+    this.pool.forEach((pl, i) => {
+      const s = near[i];
+      if (!s || s.d > 16) { pl.intensity = 0; return; }
+      pl.position.copy(s.l.pos);
+      pl.color.copy(s.l.color);
+      pl.distance = s.l.range;
+      pl.intensity = s.l.base * (0.92 + Math.sin(t * 9 + s.l.pos.x) * 0.04 + Math.random() * 0.04) * Math.min(1, (17 - s.d) / 4);
+    });
     // time-of-day: windows show the sky, sunlight through windows by day
     const day = S && !S.isNight;
     for (const m of this.windows) m.color.copy(S ? S.horizon : new THREE.Color('#8ecae6')).lerp(S ? S.top : new THREE.Color('#5aa8e0'), 0.5).multiplyScalar(day ? 1.1 : 0.7);
     this.sun.intensity = day ? 0.9 * (S.sunIntensity / 2) + 0.2 : 0.15;
+    const beamK = S ? Math.max(0, Math.min(1, (S.sunIntensity - 0.6) / 1.2)) * (1 - (this.game.state.weather.cloud || 0) * 0.7) : 0;
+    this.beamMat.opacity = day ? 0.55 * beamK : 0;
+    this.beamMat.color.copy(S ? S.sun : new THREE.Color(1, 1, 1));
     this.sun.color.copy(S ? S.sun : new THREE.Color('#fff'));
     this.hemi.intensity = day ? 0.95 : 0.8;
     this.hemi.color.set(day ? '#fff0dc' : '#b0a0c8');
