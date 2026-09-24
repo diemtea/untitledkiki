@@ -8,6 +8,11 @@ harbour full of boats. You turn it into **Broom & Board**, a hotel for pets.
 
 ![HD-2D: pixel sprites in a lit 3D diorama with tilt-shift depth of field, bloom and a day/night cycle](docs/screenshot-town.png)
 
+| | |
+| --- | --- |
+| ![Flying over Maravik at golden hour](docs/screenshot-flight.png) | ![Morning sunbeams in the guest rooms](docs/screenshot-hotel.png) |
+| ![Lanterns and warm windows at night](docs/screenshot-night.png) | ![Sheep, sunflowers and the windmill in the meadow](docs/screenshot-meadow.png) |
+
 ## The loop
 
 1. **Morning at the hotel.** Booking letters arrive in the mailbox. Accept the ones you have rooms for.
