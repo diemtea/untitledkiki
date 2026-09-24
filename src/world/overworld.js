@@ -436,6 +436,8 @@ export class Overworld {
       const d = this.camera.position.distanceTo(m.mesh.position);
       const s = clamp(d / 18, 1, 3.2);
       m.mesh.scale.setScalar(s);
+      // up close the speech bubbles do the talking
+      m.mesh.visible = w.flying || dist(w.pos.x, w.pos.z, m.mesh.position.x, m.mesh.position.z) > 7;
     }
     this.clouds.userData.update(dt, S.isNight ? new THREE.Color('#4a5680') : new THREE.Color(0.9, 0.9, 0.92).lerp(new THREE.Color(S.sun), 0.2));
     this.fadeClouds();

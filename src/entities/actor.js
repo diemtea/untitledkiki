@@ -1,7 +1,7 @@
 // Generic sprite actors: townsfolk, pets, Soot, animals. Idle bob, wander, follow, bubbles.
 import * as THREE from 'three';
 import { Billboard, blobShadow } from '../gfx/billboard.js';
-import { bubbleCanvas, iconCanvas, itemCanvas } from '../gfx/sprites.js';
+import { bubbleCanvas, iconCanvas, itemCanvas, petCanvas } from '../gfx/sprites.js';
 import { damp, clamp } from '../core/util.js';
 
 export class Actor {
@@ -47,7 +47,7 @@ export class Actor {
     if (this.bubble) { this.group.remove(this.bubble.mesh); this.bubble = null; }
     if (!kind) return;
     let innerCanvas = null;
-    if (inner) innerCanvas = inner.startsWith('icon:') ? iconCanvas(inner.slice(5)) : itemCanvas(inner);
+    if (inner) innerCanvas = inner.startsWith('icon:') ? iconCanvas(inner.slice(5)) : inner.startsWith('pet:') ? petCanvas(inner.slice(4)) : itemCanvas(inner);
     const c = bubbleCanvas(innerCanvas, kind === 'alert' ? 'alert' : kind);
     const bb = new Billboard([c], { key: 'bubble:' + key, shadow: false, basic: true });
     bb.mesh.position.y = this.bb.h + 0.1;

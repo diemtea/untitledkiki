@@ -56,13 +56,13 @@ const LINES = {
   },
 };
 
-const TEACH = {
+export const TEACH = {
   greta: ['treat_stew', 'treat_apple'],
   honeycutt: ['treat_crumble', 'treat_seedcake'],
   ivy: ['treat_moss'],
   odette: ['treat_catnip'],
 };
-const GIFTS = { marlo: 'fish', greta: 'egg', honeycutt: 'bread', ivy: 'flower', pim: 'apple' };
+export const GIFTS = { marlo: 'fish', greta: 'egg', honeycutt: 'bread', ivy: 'flower', pim: 'apple' };
 
 export function speaker(id) {
   const n = NPCS[id];
@@ -75,13 +75,14 @@ export async function talk(game, id) {
   const L = LINES[id];
   const flags = (s.npc[id] ||= { met: false, gift: 0, chat: 0 });
   game.audio.sfx('open');
+  const firstTalk = !flags.met;
   if (!flags.met) {
     flags.met = true;
     await game.ui.say(sp, L.intro);
   }
   // recipe teaching (once they know you a little)
   const teach = (TEACH[id] || []).filter((r) => !s.recipes.includes(r));
-  if (teach.length && (flags.chat >= 1 || id === 'greta' || s.day >= 2)) {
+  if (teach.length && ((flags.talks || 0) >= 1 || id === 'greta')) {
     const r = teach[0];
     s.recipes.push(r);
     await game.ui.say(sp, `Here — let me write down my recipe for ${ITEMS[r].name}. Your guests will love it. (Brew it at your cauldron!)`);
@@ -124,6 +125,7 @@ export async function talk(game, id) {
     await game.ui.say(sp, pick(L.chat));
   });
   add('Bye!', null);
+  flags.talks = (flags.talks || 0) + (firstTalk ? 1 : 1);
   const k = await game.ui.say(sp, pick(['What can I do for you?', 'Hello again!', 'Oh, it’s you! What’s up?', 'Lovely to see you.']), opts);
   if (acts[k]) await acts[k]();
 }

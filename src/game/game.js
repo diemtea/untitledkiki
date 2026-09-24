@@ -14,7 +14,7 @@ import * as ST from './state.js';
 import { ITEMS, SPECIES, GOALS, NPCS, UPGRADES } from './data.js';
 import { tickGuests, sampleGuests, scoreGuest, makeWish, wishText, isNight } from './guests.js';
 import { morningMail, makeDeliveries, freeRooms } from './jobs.js';
-import { talk, sootHint } from './townfolk.js';
+import { talk, sootHint, TEACH, GIFTS } from './townfolk.js';
 import { Title } from '../ui/title.js';
 import { clamp, dist, pick, fmtTime, randInt, chance } from '../core/util.js';
 
@@ -224,6 +224,7 @@ export class Game {
       st.update(dt, this.t, this.hour, weather, S);
     }
     this.updateFloaters(dt);
+    this.updateFireworks(dt);
 
     // ---------------------------------------------------------- interaction prompt
     this.current = busy ? null : this.findInteractable();
@@ -779,10 +780,44 @@ export class Game {
       }
       if (hit || l.life <= 0) { w.scene.remove(l.mesh); this.skyLoot.splice(i, 1); }
     }
+    // speech bubbles: townsfolk with something for you, owners waiting with their pets
+    this.bubbleT = (this.bubbleT || 0) - dt;
+    if (this.bubbleT <= 0) {
+      this.bubbleT = 0.5;
+      for (const [id, a] of Object.entries(w.npcs)) a.setBubble(...this.npcBubble(id));
+      for (const a of Object.values(w.owners)) {
+        const g = a.guest;
+        if (!g) continue;
+        if (g.status === 'booked') a.setBubble('alert', 'pet:' + g.species);
+        else if (g.status === 'party' && g.goingHome) a.setBubble('thought', 'icon:heart');
+        else a.setBubble('thought', 'pet:' + g.species);
+      }
+    }
+    // gentle nudges while you're out
+    for (const g of s.guests) {
+      if (g.status !== 'in-room') continue;
+      if (g.hunger < 25 && g.warnedHungry !== s.day) { g.warnedHungry = s.day; this.ui.toast(`${g.name} is getting hungry back at the hotel.`, 'pet:' + g.species, { life: 4 }); }
+      if (g.joy < 25 && g.warnedSad !== s.day) { g.warnedSad = s.day; this.ui.toast(`${g.name} is feeling lonely at the hotel.`, 'pet:' + g.species, { life: 4 }); }
+    }
     // glowing things borrow lights from the world's light pool
     this.world.glowSpots = this.stars.filter((st) => !st.taken && st.landed).map((st) => ({ pos: new THREE.Vector3(st.x, st.y + 0.8, st.z), color: '#ffe890', power: 4 + Math.sin(this.t * 4) }));
     // markers
     this.world.setMarkers(this.mapMarkers().filter((m) => m.world));
+  }
+
+  npcBubble(id) {
+    const s = this.state;
+    const f = s.npc[id];
+    if (!f || !f.met) return ['alert', 'icon:exclaim'];
+    if (id === 'lotta') { const ev = s.events.balloon; return ev && !ev.done ? ['alert', 'balloon'] : [null]; }
+    if (id === 'aldo' || id === 'honeycutt') {
+      const key = id + ':' + s.day;
+      const offers = s.offers && s.offers[key];
+      if (!offers || offers.some((o) => o.status === 'offered')) return ['alert', 'parcel'];
+    }
+    if (((f.talks || 0) >= 1 || id === 'greta') && (TEACH[id] || []).some((r) => !s.recipes.includes(r))) return ['alert', 'icon:sparkle'];
+    if (GIFTS[id] && f.gift !== s.day) return ['thought', GIFTS[id]];
+    return [null];
   }
 
   mapMarkers() {
@@ -966,7 +1001,23 @@ export class Game {
     return true;
   }
 
+  fireworks(seconds = 25) {
+    this.fireworksT = seconds;
+  }
+  updateFireworks(dt) {
+    if (!this.fireworksT || this.fireworksT <= 0 || this.stage !== this.world) return;
+    this.fireworksT -= dt;
+    if (Math.random() < dt * 2.2) {
+      const w = this.world;
+      const x = 42 + Math.random() * 18, z = 44 + Math.random() * 14, y = 14 + Math.random() * 6;
+      const col = pick(['#ff7a6b', '#f5d24b', '#8ecae6', '#b8a8f0', '#9cd26a', '#fff6e4']);
+      w.glowFx.burst(x, y, z, 46, { color: col, size: 0.28, life: 1.6, speed: 5, up: 1.5, gravity: 2.5, shape: 2, fadeIn: 0.02 });
+      this.audio.noise(0.5, 0.3, 300, 80);
+    }
+  }
+
   async celebrate() {
+    this.fireworks(40);
     await this.ui.say({ name: 'Soot', role: 'Your cat', portrait: 'soot', voice: 4 }, 'Six rooms, glowing reviews, and the whole town talking about us. Great-Aunt Hilde would be SO proud. The Broom & Board is officially the Grand Broom & Board!');
     this.ui.toast('The Grand Broom & Board! Thank you for playing — the hotel stays open forever.', 'icon:star', { gold: true, life: 7 });
   }
