@@ -1,0 +1,21 @@
+{
+  "name": "broom-and-board",
+  "private": true,
+  "version": "0.1.0",
+  "description": "A cozy HD-2D pixel-art game about a young witch who runs a pet hotel in a seaside town.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "build:single": "vite build --mode single",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@fontsource/pixelify-sans": "^5.3.0",
+    "three": "^0.186.0"
+  },
+  "devDependencies": {
+    "vite": "^8.3.1",
+    "vite-plugin-singlefile": "^2.3.3"
+  }
+}

@@ -1,0 +1,11 @@
+[
+ {"wait": 6000},
+ {"click": "[data-a=new]"},
+ {"click": "[data-a=go]"},
+ {"wait": 1000},
+ {"eval": "const g=__game; g.cutscene=false; g.ui.dialogEl.style.display='none'; g.ui.dialogOpen=false; g.ui._advance=null; g.state.flags.introPending=false; g.exitHotel(); g.debugStep(1.5); const gl=g.renderer.gl; gl.info.autoReset=false; gl.info.reset(); 'ok'"},
+ {"wait": 1000},
+ {"eval": "const g=__game; const gl=g.renderer.gl; const r={...gl.info.render}; const frames=r.frame; gl.info.reset(); JSON.stringify({perFrameCalls: 0, info: r, prog: gl.info.programs.length, geos: gl.info.memory})"},
+ {"eval": "const g=__game; const gl=g.renderer.gl; gl.info.reset(); g.renderer.render(g.stage.scene, g.stage.camera, 1); JSON.stringify(gl.info.render)"},
+ {"eval": "const g=__game; const gl=g.renderer.gl; g.world.witch.startTakeoff(); g.debugStep(2); gl.info.reset(); g.renderer.render(g.stage.scene, g.stage.camera, 1); JSON.stringify(gl.info.render)"}
+]

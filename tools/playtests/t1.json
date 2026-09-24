@@ -1,0 +1,18 @@
+[
+ {"wait": 7000},
+ {"click": "[data-a=new]"},
+ {"click": "[data-a=go]"},
+ {"wait": 2500},
+ {"shot": "p1_intro"},
+ {"key": "KeyE"}, {"wait": 900}, {"key": "KeyE"}, {"wait": 900}, {"key": "KeyE"},{"wait": 900}, {"key": "KeyE"},{"wait": 900},{"key": "KeyE"},{"wait": 900},{"key": "KeyE"},{"wait": 600},{"key": "KeyE"},{"wait": 600},{"key": "KeyE"},{"wait": 600},{"key": "KeyE"},
+ {"wait": 800},
+ {"shot": "p2_hotel"},
+ {"eval": "JSON.stringify({mode: __game.mode, stage: __game.stage.name, pos: __game.stage.witch.pos, cut: __game.cutscene, busy: __game.ui.busy, time: __game.state.time})"},
+ {"key": "KeyA", "ms": 900},
+ {"wait": 300},
+ {"eval": "JSON.stringify({pos: __game.stage.witch.pos, cur: __game.current && __game.current.label})"},
+ {"shot": "p3_mailbox"},
+ {"key": "KeyE"},
+ {"wait": 800},
+ {"shot": "p4_mail"}
+]

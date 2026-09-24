@@ -1,0 +1,12 @@
+[
+ {"wait": 6000},
+ {"click": "[data-a=new]"},
+ {"click": "[data-a=go]"},
+ {"wait": 1000},
+ {"eval": "const g=__game; g.cutscene=false; g.ui.dialogEl.style.display='none'; g.ui.dialogOpen=false; g.ui._advance=null; g.state.flags.introPending=false; g.state.time=22*60; g.debugStep(1); 'ok'"},
+ {"wait": 1500},
+ {"shot": "u1_hotelnight"},
+ {"eval": "const g=__game; g.exitHotel(); g.debugStep(1.5); const w=g.world.witch; w.place(50.5,47); g.world.snapCamera(); g.debugStep(1); 'ok'"},
+ {"wait": 1500},
+ {"shot": "u2_townnight"}
+]
