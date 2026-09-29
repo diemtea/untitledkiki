@@ -152,7 +152,7 @@ export class Menus {
     const S = 6;
     const c = makeCanvas(I.W * S, I.H * S);
     const x = ctx2d(c);
-    const cols = ['#2f78a8', '#ecd9a6', '#d8c08a', '#79ad45', '#8cc050', '#8bbb4e', '#4f7f34', '#b8ab94', '#d6cab2', '#c29a64', '#a8703f', '#8a5e3a', '#a39a8c', '#d97a8a'];
+    const cols = ['#2a8ad0', '#fbe2ae', '#eec890', '#5dbb46', '#78c850', '#7ccc4a', '#2f8a5a', '#e8c8b0', '#f8e4cc', '#e8ae6c', '#d68c4c', '#8c5244', '#b4acd0', '#ff9ac0'];
     for (let z = 0; z < I.H; z++) for (let xx = 0; xx < I.W; xx++) {
       const i = z * I.W + xx;
       x.fillStyle = cols[I.type[i]];
@@ -162,10 +162,10 @@ export class Menus {
       if (I.type[i] === 0) { x.fillStyle = `rgba(20,40,90,${Math.min(0.35, I.coast[i] * 0)})`; }
     }
     // water depth shading
-    for (const t of I.trees) { x.fillStyle = '#2f5a2a'; x.fillRect(t.x * S - 2, t.z * S - 2, 4, 4); }
+    for (const t of I.trees) { x.fillStyle = t.kind === 'blossom' ? '#e878a8' : t.giant ? '#163e4a' : '#1f5a4a'; const r = t.giant ? 5 : 2; x.fillRect(t.x * S - r, t.z * S - r, r * 2, r * 2); }
     for (const b of I.buildings) {
-      x.fillStyle = '#c9563f'; x.fillRect(b.x * S, b.z * S, b.w * S, b.d * S);
-      x.fillStyle = '#8e3a2d'; x.fillRect(b.x * S, b.z * S + b.d * S - 2, b.w * S, 2);
+      x.fillStyle = '#e8503a'; x.fillRect(b.x * S, b.z * S, b.w * S, b.d * S);
+      x.fillStyle = '#a42e30'; x.fillRect(b.x * S, b.z * S + b.d * S - 2, b.w * S, 2);
     }
     const marks = g.mapMarkers();
     const body = h('div');
@@ -180,7 +180,7 @@ export class Menus {
     for (const m of marks) drawIcon(m.icon, m.x, m.z, m.size || 22);
     const legend = h('div', 'legend', `<span>${img('icon:pin')} You</span><span>${img('icon:paw')} Pet pickup / return</span><span>${img('parcel')} Delivery</span><span>${img('icon:exclaim')} Shops & townsfolk</span><span>${img('icon:star')} Falling star</span>`);
     body.appendChild(legend);
-    const labels = [['Whispering Woods', 18, 22], ['Meadow & Farm', 75, 20], ['Maravik', 50, 52], ['Lighthouse', 89, 66], ['Cove', 9, 46], ['Broom & Board', 50, 16], ['Ridge', 50, 5]];
+    const labels = [['Whispering Woods', 22, 13], ['Spirit Tree', 19, 27], ['Meadow & Farm', 75, 20], ['Maravik', 50, 52], ['Lighthouse', 89, 66], ['Cove', 9, 46], ['Broom & Board', 50, 16], ['Ridge', 50, 5]];
     x.font = 'bold 13px "Pixelify Sans", sans-serif';
     x.textAlign = 'center';
     for (const [t, lx, lz] of labels) { x.fillStyle = 'rgba(42,29,46,0.8)'; x.fillText(t, lx * S + 1, lz * S + 1); x.fillStyle = '#fff6e4'; x.fillText(t, lx * S, lz * S); }

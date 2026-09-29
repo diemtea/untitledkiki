@@ -1,6 +1,6 @@
 // Meshes for buildings, landmarks and street props of the seaside town.
 import * as THREE from 'three';
-import { makeBuildingTextures, makeGableTexture, makeRoofTexture, ROOF_COLORS, drawTexture } from '../gfx/tiles.js';
+import { makeBuildingTextures, makeGableTexture, makeRoofTexture, makeTurretTexture, ROOF_COLORS, drawTexture } from '../gfx/tiles.js';
 import { makeCanvas, ctx2d, rect, px, disc, outlineCanvas, pixelTexture, shadeHex, tintHex, PX } from '../gfx/pixel.js';
 import { itemCanvas } from '../gfx/sprites.js';
 import { Billboard } from '../gfx/billboard.js';
@@ -68,11 +68,11 @@ function gableRoof(w, d, pitchH, colors, seed, wall) {
   return g;
 }
 
-function chimney(x, y, z, color = '#b85a44') {
+function chimney(x, y, z, color = '#e07050') {
   const tex = drawTexture(16, 24, (g) => {
     rect(g, 0, 0, 16, 24, color);
-    for (let yy = 0; yy < 24; yy += 4) for (let xx = (yy / 4) % 2 ? -4 : 0; xx < 16; xx += 8) { rect(g, xx, yy, 7, 3, tintHex(color, 0.15)); }
-    rect(g, 0, 0, 16, 3, '#6a5a50');
+    for (let yy = 0; yy < 24; yy += 4) for (let xx = (yy / 4) % 2 ? -4 : 0; xx < 16; xx += 8) { rect(g, xx, yy, 7, 3, tintHex(color, 0.2)); rect(g, xx, yy + 3, 8, 1, '#fff0d8'); }
+    rect(g, 0, 0, 16, 3, '#6a4a5a');
   });
   const m = new THREE.Mesh(new THREE.BoxGeometry(0.55, 1.4, 0.55), lambert({ map: tex }));
   m.position.set(x, y, z);
@@ -116,7 +116,7 @@ export function buildBuilding(b, levelY) {
   const r = rng(seed);
   const hTiles = Math.round(b.h * 1);
   const texH = b.h;
-  const tx = makeBuildingTextures({ w: b.w, d: b.d, h: texH, seed, wall: b.wall, shutter: b.shutter, timber: b.timber, door: b.door !== false, doorX: b.doorX, doorColor: b.doorColor, arch: b.kind === 'shop' || b.kind === 'hotel' });
+  const tx = makeBuildingTextures({ w: b.w, d: b.d, h: texH, seed, wall: b.wall, shutter: b.shutter, timber: b.timber, door: b.door !== false, doorX: b.doorX, doorColor: b.doorColor, arch: b.kind === 'shop' || b.kind === 'hotel', ivy: b.ivy });
   b.wall = tx.wall;
   const front = wallMat(tx.front), side = wallMat(tx.side), back = wallMat(tx.back);
   const plain = lambert({ color: tx.wall });
@@ -178,7 +178,7 @@ export function buildBuilding(b, levelY) {
   group.add(plinth);
 
   const roofCols = ROOF_COLORS[(b.roof ?? r.int(0, ROOF_COLORS.length - 1)) % ROOF_COLORS.length];
-  const roof = gableRoof(b.w, b.d, Math.max(1.1, b.d * 0.42), roofCols, seed, tx.wall);
+  const roof = gableRoof(b.w, b.d, Math.max(1.6, b.d * 0.62), roofCols, seed, tx.wall);
   roof.position.y = b.h;
   group.add(roof);
   if (b.kind !== 'barn' && r() < 0.8) group.add(chimney((r() - 0.5) * (b.w - 1.5), b.h + 1.0, -b.d * 0.18));
@@ -215,6 +215,47 @@ export function buildBuilding(b, levelY) {
     const rail = new THREE.Mesh(new THREE.PlaneGeometry(3.2, 0.6), lambert({ map: railTex, transparent: true, alphaTest: 0.5, side: THREE.DoubleSide }));
     rail.position.set(0, 2.85, frontZ + 0.8);
     group.add(rail);
+    // the turret: a round tower in the corner topped with a crooked witch's hat
+    const tH = b.h + 2.4, tR = 1.3;
+    const tt = makeTurretTexture(tx.wall, tH, seed + 5);
+    tt.tex.repeat.set(1, 1);
+    const turretMat = lambert({ map: tt.tex, emissiveMap: tt.emTex, emissive: new THREE.Color('#ffc46a'), emissiveIntensity: 0 });
+    glowMaterials.push(turretMat);
+    const turret = new THREE.Mesh(new THREE.CylinderGeometry(tR, tR + 0.08, tH, 20, 1, true), turretMat);
+    const tx0 = b.w / 2 - 0.4, tz0 = frontZ - 0.9;
+    turret.position.set(tx0, tH / 2, tz0);
+    turret.rotation.y = -0.4;
+    turret.castShadow = turret.receiveShadow = true;
+    group.add(turret);
+    const pts = [];
+    const hatH = 4.2;
+    pts.push(new THREE.Vector2(0.0, -0.02), new THREE.Vector2(tR + 0.55, 0.0), new THREE.Vector2(tR + 0.45, 0.18), new THREE.Vector2(tR + 0.05, 0.22));
+    for (let i = 1; i <= 12; i++) { const t = i / 12; pts.push(new THREE.Vector2((tR + 0.05) * Math.pow(1 - t, 1.35) + 0.03, 0.22 + t * hatH)); }
+    const hatGeo = new THREE.LatheGeometry(pts, 18);
+    const hp = hatGeo.attributes.position;
+    for (let i = 0; i < hp.count; i++) { const y = hp.getY(i); if (y > hatH * 0.55) hp.setX(i, hp.getX(i) + Math.pow((y - hatH * 0.55) / hatH, 2) * 2.4); }
+    hatGeo.computeVertexNormals();
+    const hatTex = makeRoofTexture(ROOF_COLORS[5], seed + 9, 2, 2);
+    hatTex.repeat.set(4, 2);
+    const hat = new THREE.Mesh(hatGeo, lambert({ map: hatTex, side: THREE.DoubleSide }));
+    hat.position.set(tx0, tH, tz0);
+    hat.castShadow = true;
+    group.add(hat);
+    const band = new THREE.Mesh(new THREE.TorusGeometry(tR + 0.02, 0.1, 6, 20), lambert({ color: '#f2c14e', emissive: new THREE.Color('#6a4a10') }));
+    band.rotation.x = Math.PI / 2;
+    band.position.set(tx0, tH + 0.42, tz0);
+    group.add(band);
+    // a golden crescent moon on the tip
+    const moonCanvas = makeCanvas(12, 12), mg = ctx2d(moonCanvas);
+    for (let y = 0; y < 12; y++) for (let x = 0; x < 12; x++) {
+      const a = (x - 5.5) ** 2 + (y - 6) ** 2 <= 25, b2 = (x - 8) ** 2 + (y - 4.5) ** 2 <= 17;
+      if (a && !b2) px(mg, x, y, x < 4 ? '#fff4a8' : '#ffd84a');
+    }
+    const moon = new Billboard([outlineCanvas(moonCanvas, '#8a5a1a')], { key: 'hotelmoon', shadow: false, basic: true, scale: 1.3 });
+    moon.mesh.material = new THREE.MeshBasicMaterial({ map: moon.sheet.tex, alphaTest: 0.5, color: new THREE.Color(1.6, 1.4, 0.9) });
+    moon.mesh.position.set(tx0 + 2.4 * Math.pow(0.45, 2) + 0.05, tH + hatH + 0.05, tz0);
+    group.add(moon.mesh);
+    group.userData.moonTip = moon.mesh;
     // door lanterns
     group.userData.lanterns = [new THREE.Vector3(b.doorX - b.w / 2 + 0.5 - 0.9, 1.9, frontZ + 0.25), new THREE.Vector3(b.doorX - b.w / 2 + 0.5 + 0.9, 1.9, frontZ + 0.25)];
   }

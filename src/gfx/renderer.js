@@ -68,6 +68,12 @@ uniform vec2 irisCenter;
 uniform vec2 resolution;
 uniform float grain;
 uniform float tiltShift;
+uniform vec3 shadowTint;
+uniform vec3 highlightTint;
+uniform float split;
+uniform float vibrance;
+uniform float dream;
+uniform vec3 vigColor;
 varying vec2 vUv;
 
 float viewDepth(vec2 uv) {
@@ -101,18 +107,31 @@ void main() {
   vec3 bloom = texture2D(tBloom1, vUv).rgb * 0.6 + texture2D(tBloom2, vUv).rgb * 0.9;
   col += bloom * bloomStrength;
 
+  // dreamy storybook glow: screen-blend a soft blurred copy over everything
+  col = 1.0 - (1.0 - col) * (1.0 - b2 * dream);
+
   // grade
   col = col * tint + lift * (1.0 - col);
   float l = dot(col, vec3(0.2126, 0.7152, 0.0722));
+  // hue-shifted split toning: violet-blue shadows, golden highlights (painterly, not photographic)
+  float sw = 1.0 - smoothstep(0.02, 0.42, l);
+  float hw = smoothstep(0.35, 0.95, l);
+  col = mix(col, col * shadowTint, sw * split);
+  col = mix(col, col * highlightTint, hw * split);
+  l = dot(col, vec3(0.2126, 0.7152, 0.0722));
   col = mix(vec3(l), col, saturation);
+  // vibrance: push muted colours harder than already-vivid ones
+  float mx = max(col.r, max(col.g, col.b)), mn = min(col.r, min(col.g, col.b));
+  float sat = (mx - mn) / (mx + 1e-4);
+  col = mix(vec3(l), col, 1.0 + vibrance * (1.0 - sat));
   col = (col - 0.5) * contrast + 0.5;
   col = softClip(max(col, 0.0));
 
-  // vignette
+  // coloured vignette (dusky violet instead of black)
   vec2 q = vUv - 0.5;
   q.x *= resolution.x / resolution.y;
   float v = smoothstep(0.35, 1.05, length(q) * 1.15);
-  col *= 1.0 - v * vignette;
+  col = mix(col, col * vigColor, v * vignette);
 
   // grain
   float n = fract(sin(dot(vUv * resolution + time * 61.0, vec2(12.9898, 78.233))) * 43758.5453);
@@ -159,13 +178,15 @@ export class Renderer {
       tScene: { value: null }, tDepth: { value: null }, tBlur1: { value: null }, tBlur2: { value: null },
       tBloom1: { value: null }, tBloom2: { value: null },
       cameraNear: { value: 0.5 }, cameraFar: { value: 400 },
-      focusDist: { value: 20 }, focusBand: { value: 3 }, focusRange: { value: 14 }, dofStrength: { value: 1 },
-      bloomStrength: { value: 0.8 }, vignette: { value: 0.35 },
+      focusDist: { value: 20 }, focusBand: { value: 3 }, focusRange: { value: 14 }, dofStrength: { value: 0.85 },
+      bloomStrength: { value: 0.9 }, vignette: { value: 0.42 },
       tint: { value: new THREE.Vector3(1, 1, 1) }, lift: { value: new THREE.Vector3(0, 0, 0) },
-      saturation: { value: 1.08 }, contrast: { value: 1.04 }, time: { value: 0 },
+      saturation: { value: 1.2 }, contrast: { value: 1.02 }, time: { value: 0 },
       fade: { value: 0 }, fadeColor: { value: new THREE.Vector3(0.07, 0.05, 0.1) },
       iris: { value: 1.5 }, irisCenter: { value: new THREE.Vector2(0.5, 0.5) },
-      resolution: { value: new THREE.Vector2(1, 1) }, grain: { value: 0.018 }, tiltShift: { value: 0.35 },
+      resolution: { value: new THREE.Vector2(1, 1) }, grain: { value: 0.006 }, tiltShift: { value: 0.35 },
+      shadowTint: { value: new THREE.Vector3(0.88, 0.86, 1.16) }, highlightTint: { value: new THREE.Vector3(1.06, 1.02, 0.92) },
+      split: { value: 0.55 }, vibrance: { value: 0.35 }, dream: { value: 0.14 }, vigColor: { value: new THREE.Vector3(0.62, 0.5, 0.86) },
     });
     this.post = this.compMat.uniforms;
 
@@ -241,7 +262,7 @@ export class Renderer {
       this.blur(T.q1, T.q2, 1.2);
       this.blur(T.q1, T.q2, 2.0);
       // bloom
-      this.down(T.scene, T.h3, 0.86);
+      this.down(T.scene, T.h3, 0.8);
       this.blur(T.h3, T.h2, 1.0);
       this.down(T.h3, T.q3);
       this.blur(T.q3, T.q2, 1.5);

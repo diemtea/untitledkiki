@@ -57,11 +57,14 @@ void main() {
   foamMask *= step(0.001, dt);
   col = mix(col, foam, clamp(foamMask, 0.0, 1.0) * 0.9);
 
+  // shimmering caustics in the shallows
+  float ca = sin(p.x * 2.6 + time * 1.1 + sin(p.y * 1.9 + time * 0.8)) * sin(p.y * 2.3 - time * 0.9 + sin(p.x * 1.7));
+  col += step(0.86, ca) * vec3(0.18, 0.26, 0.22) * (1.0 - smoothstep(0.8, 3.5, dt));
   // sparkles
   vec2 cell = floor(vWorld.xz * 4.0);
   float h = hash(cell);
   float tw = sin(time * (2.0 + h * 3.0) + h * 40.0);
-  float sparkle = step(0.985, h) * step(0.6, tw) * smoothstep(1.0, 3.0, dt);
+  float sparkle = step(0.978, h) * step(0.55, tw) * smoothstep(1.0, 3.0, dt);
   col += sparkle * mix(vec3(0.9, 0.95, 1.0), vec3(1.0, 0.95, 0.75), night);
 
   // rain ripples
@@ -94,9 +97,9 @@ export function createWater(shoreTex, W, H, y) {
       time: { value: 0 },
       tDist: { value: shoreTex },
       mapSize: { value: new THREE.Vector2(W, H) },
-      deep: { value: new THREE.Color('#1c5c8f') },
-      shallow: { value: new THREE.Color('#58c0cf') },
-      foam: { value: new THREE.Color('#f2fbff') },
+      deep: { value: new THREE.Color('#1e56b8') },
+      shallow: { value: new THREE.Color('#44e2d0') },
+      foam: { value: new THREE.Color('#f6fffc') },
       light: { value: new THREE.Color(1, 1, 1) },
       skyTint: { value: new THREE.Color(0.6, 0.8, 1) },
       night: { value: 0 },

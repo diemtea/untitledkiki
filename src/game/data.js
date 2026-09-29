@@ -197,6 +197,7 @@ export const GOALS = [
   { id: 'fullHouse', text: 'Host 4 guests at once', reward: 40 },
   { id: 'upgrade', text: 'Buy gear at Fen’s Flight Works', reward: 15 },
   { id: 'deliveries10', text: 'Complete 10 deliveries', reward: 40 },
+  { id: 'spirits', text: 'Greet all eight hushlings in the Whispering Woods', reward: 40 },
   { id: 'grand', text: 'Open all six rooms and reach 30 reputation', reward: 100 },
 ];
 

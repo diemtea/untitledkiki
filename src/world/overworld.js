@@ -8,13 +8,14 @@ import { createSky, createClouds } from '../gfx/sky.js';
 import { SpriteBatch } from '../gfx/batch.js';
 import { Particles } from '../gfx/particles.js';
 import { Billboard } from '../gfx/billboard.js';
-import { butterflyCanvas, treeCanvas, nodeCanvas, npcCanvas, NPC_LOOKS, tuftCanvas, rockCanvas, sheepCanvas, chickenCanvas, gullCanvas, sootSheet, petCanvas, randomOwnerLook, itemCanvas, iconCanvas } from '../gfx/sprites.js';
+import { hushlingCanvas, stoneLanternCanvas, butterflyCanvas, treeCanvas, nodeCanvas, npcCanvas, NPC_LOOKS, tuftCanvas, rockCanvas, sheepCanvas, chickenCanvas, gullCanvas, sootSheet, petCanvas, randomOwnerLook, itemCanvas, iconCanvas } from '../gfx/sprites.js';
 import { buildBuilding, glowMaterials, lampPost, bench, barrel, crate, flowerPotCanvas, stall, fountain, windmill, lighthouse, boat, fence, signpost, launchpad } from './buildings.js';
 import { Witch, CRUISE_Y } from '../entities/witch.js';
 import { Actor } from '../entities/actor.js';
 import { Sky } from './lighting.js';
 import { rng, damp, clamp, hash2, dist } from '../core/util.js';
 import { applySeeThrough, applySeeThroughTree, updateSeeThrough, ST } from '../gfx/seethrough.js';
+import { GlowField, lightShaft } from '../gfx/glow.js';
 
 export class Overworld {
   constructor(game) {
@@ -80,10 +81,18 @@ export class Overworld {
     // --- trees
     for (const t of I.trees) {
       const variant = t.seed % 5;
-      const c = treeCanvas(t.kind, variant + (t.kind === 'oak' ? 10 : t.kind === 'pine' ? 20 : 30));
+      const c = t.giant ? treeCanvas(t.kind, t.seed) : treeCanvas(t.kind, variant + (t.kind === 'oak' ? 10 : t.kind === 'pine' ? 20 : 30));
       const y = levelY(I.height[I.idx(t.x | 0, t.z | 0)]);
-      batch.add(c, t.x, y, t.z, { sway: t.kind === 'cypress' ? 0.6 : 1, scale: t.kind === 'cypress' ? 1.05 : 1 });
+      batch.add(c, t.x, y, t.z, { sway: t.giant ? 0.25 : t.kind === 'cypress' ? 0.6 : 1, scale: t.kind === 'cypress' ? 1.05 : 1, sink: t.giant ? 0.3 : 0.06 });
       if (t.kind === 'pine' || t.kind === 'cypress') this.colliders.push({ x: t.x, z: t.z, r: 0.4, top: y + 3.4 });
+      if (t.giant) this.colliders.push({ x: t.x, z: t.z, r: t.kind === 'spirittree' ? 3.2 : 2.4, top: y + c.height / 16 });
+    }
+    // ferns, toadstools, luminous mushrooms, flowering shrubs
+    this.glowPoints ||= [];
+    for (const f of I.flora) {
+      const y = levelY(I.height[I.idx(f.x | 0, f.z | 0)]);
+      batch.add(treeCanvas(f.kind, (f.x * 7 + f.z * 13) % 5), f.x, y, f.z, { sway: f.kind === 'fern' || f.kind === 'flowerbush' ? 0.35 : 0, sink: 0.04 });
+      if (f.glow) this.glowPoints.push({ x: f.x, y: y + 0.35, z: f.z, color: '#7af0ff', size: 0.6, night: true });
     }
     // decorative tufts, flowers & rocks
     const R = rng(99);
@@ -146,6 +155,8 @@ export class Overworld {
     // hide empty variants initially
     for (const ns of this.nodeSprites) if (ns && ns.idEmpty >= 0) batch.setVisible(ns.idEmpty, false);
 
+    this.buildMagic();
+
     // --- seagulls circling the harbour
     this.gulls = [];
     const gullTex = [gullCanvas(0), gullCanvas(1)];
@@ -200,6 +211,75 @@ export class Overworld {
     // camera rig
     this.cam = { target: new THREE.Vector3(), dist: 18, pitch: 0.62, fov: 30 };
     this.shake = 0;
+  }
+
+  // ------------------------------------------------------------------ magic: wisps, spirits, light shafts
+  buildMagic() {
+    const I = this.I;
+    const R = rng(2024);
+    const glow = (this.glow = new GlowField());
+    for (const p of this.glowPoints || []) glow.add(p.x, p.y, p.z, p.color, p.size, 0, p.night);
+    const forestTiles = [], flowerTiles = [];
+    for (let z = 0; z < H; z++) for (let x = 0; x < W; x++) {
+      const i = I.idx(x, z);
+      if (!I.land[i]) continue;
+      if (I.zone[i] === 'forest') forestTiles.push([x, z]);
+      if (I.type[i] === T.FLOWERS || I.type[i] === T.MEADOW || I.type[i] === T.GARDEN) flowerTiles.push([x, z]);
+    }
+    // spirit wisps drifting through the ancient woods (dim by day, bright at night)
+    for (let k = 0; k < 46 && forestTiles.length; k++) {
+      const [x, z] = R.pick(forestTiles);
+      const y = levelY(I.height[I.idx(x, z)]);
+      glow.add(x + R(), y + R.range(0.8, 2.6), z + R(), R.pick(['#bfffea', '#d8fff4', '#a8f0ff', '#e8ffd0']), R.range(0.3, 0.5), 1, false);
+    }
+    // a halo of wisps around the Spirit Tree
+    const st = I.landmarks.spiritTree;
+    if (st) {
+      const y = levelY(I.height[I.idx(st.x | 0, st.z | 0)]);
+      for (let k = 0; k < 18; k++) glow.add(st.x + R.range(-3, 3), y + R.range(1.5, 7), st.z + R.range(-1.5, 2), R.pick(['#dffcff', '#9cf0e8', '#fff4c0']), R.range(0.3, 0.5), 1, false);
+    }
+    // moonflowers that open after dark
+    for (let k = 0; k < 90 && flowerTiles.length; k++) {
+      const [x, z] = R.pick(flowerTiles);
+      const y = levelY(I.height[I.idx(x, z)]);
+      glow.add(x + R(), y + 0.15, z + R(), R.pick(['#ffb8e8', '#b8d8ff', '#fff0b0', '#d0b8ff']), R.range(0.22, 0.32), 0, true);
+    }
+    // sparkles circling the hotel turret's witch hat
+    const hotel = I.buildings.find((b) => b.kind === 'hotel');
+    if (hotel) {
+      const hx = hotel.x + hotel.w - 0.4, hz = hotel.z + hotel.d - 0.9, hy = levelY(hotel.base) + hotel.h + 4.2;
+      for (let k = 0; k < 14; k++) glow.add(hx, hy + R.range(-1.5, 1.5), hz, R.pick(['#fff4a8', '#ffb8e8', '#b8f0ff']), R.range(0.18, 0.28), 2, false);
+    }
+    // hushlings (forest spirits)
+    this.spirits = (I.spirits || []).map((p, k) => {
+      const a = new Actor([hushlingCanvas(0), hushlingCanvas(1), hushlingCanvas(2)], { key: 'hushling', kind: 'spirit', shadowR: 0.22 });
+      const y = levelY(I.height[I.idx(p.x | 0, p.z | 0)]);
+      a.place(p.x, y, p.z);
+      a.addTo(this.scene);
+      a.spiritIndex = k;
+      a.rattleT = 0;
+      a.coolT = Math.random() * 3;
+      glow.add(p.x, y + 0.75, p.z + 0.02, '#e8fff0', 0.5, 0, true);
+      return a;
+    });
+    this.scene.add(glow.build());
+    // god rays slanting through the canopy
+    this.shafts = [];
+    const giants = I.trees.filter((t) => t.giant);
+    const spots = [];
+    for (const t of giants) for (let k = 0; k < 2; k++) spots.push([t.x + R.range(-3.5, 3.5), t.z + R.range(0.5, 3)]);
+    for (let k = 0; k < 8 && forestTiles.length; k++) { const [x, z] = R.pick(forestTiles); spots.push([x + 0.5, z + 0.5]); }
+    for (const [x, z] of spots) {
+      const hgt = R.range(5, 8);
+      const m = lightShaft(R.range(1.1, 2.2), hgt);
+      const y = levelY(I.height[I.idx(Math.floor(x), Math.floor(z))]);
+      m.position.set(x, y + hgt * 0.42, z);
+      m.rotation.set(-0.28, R.range(-0.25, 0.25), R.range(0.15, 0.4));
+      m.userData.ph = R() * 10;
+      this.scene.add(m);
+      this.shafts.push(m);
+    }
+    this.blossoms = I.trees.filter((t) => t.kind === 'blossom');
   }
 
   // ------------------------------------------------------------------ world queries
@@ -272,6 +352,12 @@ export class Overworld {
       case 'fence': obj = fence(p.dir); obj.position.set(p.x, y, p.z); break;
       case 'signpost': obj = signpost(p.text); obj.position.set(p.x, y, p.z); break;
       case 'launchpad': obj = launchpad(); obj.position.set(p.x, y + 0.01, p.z); break;
+      case 'stonelantern': {
+        batch.add(stoneLanternCanvas(), p.x, y, p.z, {});
+        this.lamps.push({ pos: new THREE.Vector3(p.x, y + 1.0, p.z + 0.2), mat: null });
+        (this.glowPoints ||= []).push({ x: p.x, y: y + 1.05, z: p.z + 0.05, color: '#ffd870', size: 0.5, night: true });
+        return;
+      }
     }
     if (obj) {
       if (p.kind !== 'launchpad' && p.kind !== 'boat') applySeeThroughTree(obj);
@@ -354,6 +440,7 @@ export class Overworld {
   // ------------------------------------------------------------------ per-frame
   update(dt, t, hour, weather) {
     this.time = t;
+    this.hourNow = hour;
     const S = this.skyState.compute(hour, weather);
     this.applySky(S, weather, t);
     const I = this.I;
@@ -445,10 +532,37 @@ export class Overworld {
     this.batch.uniforms.uWind.value = 1 + (weather.wind || 0) * 1.5 + (weather.rain || 0);
 
     this.ambientParticles(dt, t, S, weather);
+    this.updateMagic(dt, t, S);
     this.fx.update(dt, t);
     this.glowFx.update(dt, t);
     this.updateCamera(dt);
     this.updateLampPool(S);
+  }
+
+  updateMagic(dt, t, S) {
+    const r = this.game.renderer;
+    const scale = r.height * r.pixelRatio / (2 * Math.tan((this.camera.fov * Math.PI) / 360));
+    this.glow.update(t, S.night, scale);
+    const sunK = S.isNight ? 0 : clamp((S.sunIntensity - 0.5) / 1.3, 0, 1);
+    for (const m of this.shafts) m.material.opacity = 0.4 * sunK * (0.75 + 0.25 * Math.sin(t * 0.35 + m.userData.ph));
+    // hushlings turn to look at you and rattle their heads
+    const w = this.witch;
+    for (const a of this.spirits) {
+      const d = dist(a.pos.x, a.pos.z, w.pos.x, w.pos.z);
+      a.coolT -= dt;
+      if (d < 4.5 && a.coolT <= 0 && !w.flying) {
+        a.rattleT = 0.9;
+        a.coolT = 4 + Math.random() * 3;
+        this.game.audio?.sfx('rattle');
+      }
+      if (a.rattleT > 0) {
+        a.rattleT -= dt;
+        a.bb.setFrame(1 + (Math.floor(a.rattleT * 14) % 2), w.pos.x < a.pos.x);
+      } else a.bb.setFrame(0, w.pos.x < a.pos.x);
+      a.t += dt;
+      a.bb.mesh.position.y = Math.abs(Math.sin(a.t * 1.3 + a.spiritIndex)) * 0.04;
+      a.shadow.position.set(a.pos.x, a.pos.y + 0.03, a.pos.z + 0.04);
+    }
   }
 
   ambientParticles(dt, t, S, weather) {
@@ -464,8 +578,26 @@ export class Overworld {
       const i = this.I.idx(clamp(x | 0, 0, W - 1), clamp(z | 0, 0, H - 1));
       const tt = this.I.type[i];
       if (tt === T.FOREST || tt === T.MEADOW || tt === T.GRASS || tt === T.FLOWERS || tt === T.GARDEN) {
-        this.glowFx.spawn({ x, y: this.groundY(x, z) + 0.4 + R() * 1.2, z, life: 4 + R() * 3, size: 0.14, color: '#d8ff7a', alpha: 1, wobble: 0.8, twinkle: 5, shape: 2, fadeIn: 0.4 });
+        this.glowFx.spawn({ x, y: this.groundY(x, z) + 0.4 + R() * 1.2, z, life: 4 + R() * 3, size: 0.14, color: R() < 0.7 ? '#d8ff7a' : R() < 0.5 ? '#ffb8e8' : '#9cf0ff', alpha: 1, wobble: 0.8, twinkle: 5, shape: 2, fadeIn: 0.4 });
       }
+    }
+    // blossom petals drifting down
+    if (this.blossoms.length && R() < dt * 8) {
+      const b = this.blossoms[Math.floor(R() * this.blossoms.length)];
+      if (dist(b.x, b.z, c.x, c.z) < 22) {
+        const y = this.groundY(b.x, b.z) + 2.2 + R() * 1.2;
+        this.fx.spawn({ x: b.x + (R() - 0.5) * 2.4, y, z: b.z + (R() - 0.5) * 1.2, vx: 0.35, vy: -0.45, life: 4.5, size: 0.09, color: R() < 0.6 ? '#ffb8d8' : '#fff0f6', alpha: 0.95, wobble: 1.1, fadeIn: 0.2 });
+      }
+    }
+    // low mist curling through the ancient woods
+    const ci = this.I.idx(clamp(c.x | 0, 0, W - 1), clamp(c.z | 0, 0, H - 1));
+    const inWoods = this.I.zone[ci] === 'forest';
+    const hr = this.hourNow ?? 12;
+    const mistRate = (inWoods ? 3.5 : 0) + (hr > 5 && hr < 9 ? 3 : 0);
+    if (mistRate > 0 && R() < dt * mistRate) {
+      const x = c.x + (R() - 0.5) * 26, z = c.z + (R() - 0.5) * 18;
+      const i = this.I.idx(clamp(x | 0, 0, W - 1), clamp(z | 0, 0, H - 1));
+      if (this.I.land[i]) this.fx.spawn({ x, y: this.groundY(x, z) + 0.3 + R() * 0.5, z, vx: 0.25, vy: 0.02, life: 8, size: 2.2 + R() * 1.4, color: S.isNight ? '#b8c8ff' : '#f0fff8', alpha: 0.13, wobble: 0.2, fadeIn: 0.35, shape: 3 });
     }
     // rain
     if (weather.rain > 0) {
@@ -497,8 +629,13 @@ export class Overworld {
         this.glowFx.spawn({ x: n.x + (R() - 0.5) * 0.3, y: n.y + 0.4, z: n.z + 0.1, vy: 0.3, life: 0.6, size: 0.2, color: '#fff8d0', shape: 2, fadeIn: 0.2 });
       }
     }
-    // wind streaks while flying fast
+    // a trail of pastel sparkles behind the broom
     const w = this.witch;
+    if (w.mode === 'fly' && R() < dt * (12 + (w.speed || 0) * 3)) {
+      const back = w.flip ? 1 : -1;
+      this.glowFx.spawn({ x: w.pos.x + back * 1.0 + (R() - 0.5) * 0.3, y: w.pos.y + 0.45 + (R() - 0.5) * 0.3, z: w.pos.z + 0.05, vx: -w.vel.x * 0.15, vy: -0.3, vz: -w.vel.z * 0.15, life: 0.9, size: 0.16, color: R() < 0.33 ? '#ffd8f0' : R() < 0.5 ? '#fff4a8' : '#b8f0ff', shape: 2, gravity: 0.4, fadeIn: 0.05 });
+    }
+    // wind streaks while flying fast
     if (w.mode === 'fly' && (w.speed || 0) > 6 && R() < dt * 30) {
       this.fx.spawn({ x: w.pos.x + (R() - 0.5) * 6, y: w.pos.y + (R() - 0.3) * 3, z: w.pos.z + (R() - 0.5) * 4, vx: -w.vel.x * 1.4, vz: -w.vel.z * 1.4, life: 0.5, size: 0.08, color: '#ffffff', alpha: 0.6 });
     }
@@ -541,6 +678,9 @@ export class Overworld {
     post.tint.value.copy(S.tint);
     post.lift.value.copy(S.lift);
     post.saturation.value = S.saturation;
+    post.shadowTint.value.copy(S.shadowTint);
+    post.highlightTint.value.copy(S.highlightTint);
+    post.dream.value = S.dream;
     this.S = S;
   }
 
@@ -553,7 +693,7 @@ export class Overworld {
       v.copy(m.position).project(cam);
       const sd = Math.hypot((v.x - pv.x) * cam.aspect, v.y - pv.y);
       const closer = cam.position.distanceTo(m.position) < pd;
-      const target = closer && sd < 0.9 ? 0.18 : 0.92;
+      const target = closer && sd < 0.9 ? 0.15 : this.witch.flying ? 0.62 : 0.82;
       m.material.opacity += (target - m.material.opacity) * 0.1;
     }
   }

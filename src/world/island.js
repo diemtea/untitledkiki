@@ -30,8 +30,8 @@ export const TYPE_INFO = [
 ];
 
 const HOUSE_COLORS = [
-  ['cream', '#f2e3c6'], ['butter-yellow', '#f4d58d'], ['mint', '#bfe0c9'], ['sky-blue', '#a8d0e6'],
-  ['salmon', '#f2b5a7'], ['peach', '#f0c8a0'], ['lilac', '#e0d4ee'], ['sage', '#d8e6b8'],
+  ['cream', '#fff0c8'], ['butter-yellow', '#ffe07a'], ['mint', '#b8f0d0'], ['sky-blue', '#b0dcff'],
+  ['rose-pink', '#ffc4cc'], ['apricot', '#ffcf9e'], ['lavender', '#e4ccff'], ['lime', '#d8f4a0'],
 ];
 
 const ell = (x, z, cx, cz, rx, rz) => ((x - cx) / rx) ** 2 + ((z - cz) / rz) ** 2;
@@ -250,14 +250,14 @@ export function buildIsland() {
     return b;
   }
 
-  building({ id: 'hotel', kind: 'hotel', x: 44, z: 19, w: 12, d: 6, h: 4.4, roof: 0, wall: '#f6ead2', shutter: '#3f6fa8', timber: true, doorX: 6, doorColor: '#8e3a2d' });
+  building({ id: 'hotel', kind: 'hotel', x: 44, z: 19, w: 12, d: 6, h: 4.4, roof: 0, wall: '#fff2d8', shutter: '#8a5ad0', timber: true, doorX: 6, doorColor: '#e8503a', ivy: true });
   landmarks.hotelDoor = { x: 50.5, z: 25.7 };
   landmarks.launch = { x: 50.5, z: 27.5 };
-  building({ id: 'clocktower', kind: 'tower', x: 53, z: 37, w: 3, d: 3, h: 9.5, roof: 3, wall: '#efe0c0', door: false });
-  building({ id: 'bakery', kind: 'shop', x: 38, z: 41, w: 6, d: 5, h: 3.6, roof: 0, wall: '#f4d58d', shutter: '#4f8a6a', doorX: 2, sign: 'bread', name: "Honeycutt's Bakery" });
-  building({ id: 'postoffice', kind: 'shop', x: 57, z: 41, w: 6, d: 5, h: 3.6, roof: 4, wall: '#f2e3c6', shutter: '#b84a3a', doorX: 3, sign: 'letter', name: 'Post Office' });
-  building({ id: 'curio', kind: 'shop', x: 38, z: 54, w: 5, d: 5, h: 3.4, roof: 5, wall: '#e0d4ee', shutter: '#7a5a9a', doorX: 2, sign: 'shell', name: "Odette's Curios" });
-  building({ id: 'workshop', kind: 'shop', x: 62, z: 54, w: 5, d: 5, h: 3.2, roof: 3, wall: '#e8c9a0', shutter: '#2f6f7a', doorX: 2, timber: true, sign: 'gear_bristles', name: "Fen's Flight Works" });
+  building({ id: 'clocktower', kind: 'tower', x: 53, z: 37, w: 3, d: 3, h: 9.5, roof: 3, wall: '#fff0d0', door: false });
+  building({ id: 'bakery', kind: 'shop', x: 38, z: 41, w: 6, d: 5, h: 3.6, roof: 0, wall: '#ffe07a', shutter: '#3cb878', doorX: 2, sign: 'bread', name: "Honeycutt's Bakery" });
+  building({ id: 'postoffice', kind: 'shop', x: 57, z: 41, w: 6, d: 5, h: 3.6, roof: 4, wall: '#fff0d8', shutter: '#e8503a', doorX: 3, sign: 'letter', name: 'Post Office' });
+  building({ id: 'curio', kind: 'shop', x: 38, z: 54, w: 5, d: 5, h: 3.4, roof: 5, wall: '#e4ccff', shutter: '#8a5ad0', doorX: 2, sign: 'shell', name: "Odette's Curios" });
+  building({ id: 'workshop', kind: 'shop', x: 62, z: 54, w: 5, d: 5, h: 3.2, roof: 3, wall: '#ffcf9e', shutter: '#2fb0a0', doorX: 2, timber: true, sign: 'gear_bristles', name: "Fen's Flight Works" });
   // Houses — Hill street row (on the slope), main street row, harbour row
   const houseSpots = [
     [31, 41, 4, 4], [65, 41, 4, 4], [69, 40, 3, 4],
@@ -271,9 +271,9 @@ export function buildIsland() {
     building({ id: 'house' + k, kind: 'house', x, z, w, d, h: 2.8 + ((k * 7) % 4) * 0.5, roof: k % 6, seed: 101 + k * 13, doorX: Math.floor(w / 2) - (k % 2), wall, label: `the ${colorName} house on ${street}` });
   });
   // countryside
-  building({ id: 'farmhouse', kind: 'house', x: 84, z: 24, w: 5, d: 4, h: 3, roof: 0, wall: '#f7ecd8', shutter: '#b84a3a', timber: true, doorX: 2, seed: 777, label: 'the farmhouse in the meadow' });
-  building({ id: 'cabin', kind: 'house', x: 13, z: 30, w: 4, d: 3, h: 2.6, roof: 3, wall: '#c8a070', shutter: '#4f8a6a', timber: true, doorX: 1, seed: 779, label: "Ivy's cabin in the woods", noGuests: true });
-  building({ id: 'shack', kind: 'house', x: 37, z: 60, w: 3, d: 3, h: 2.4, roof: 4, wall: '#a8d0e6', shutter: '#3f6fa8', doorX: 1, seed: 780, label: "the fisher's shack by the quay" });
+  building({ id: 'farmhouse', kind: 'house', x: 84, z: 24, w: 5, d: 4, h: 3, roof: 0, wall: '#fff6e8', shutter: '#e8503a', timber: true, doorX: 2, seed: 777, label: 'the farmhouse in the meadow' });
+  building({ id: 'cabin', kind: 'house', x: 13, z: 30, w: 4, d: 3, h: 2.6, roof: 3, wall: '#e8c898', shutter: '#3cb878', timber: true, ivy: true, doorX: 1, seed: 779, label: "Ivy's cabin in the woods", noGuests: true });
+  building({ id: 'shack', kind: 'house', x: 37, z: 60, w: 3, d: 3, h: 2.4, roof: 4, wall: '#b0dcff', shutter: '#3a70d8', doorX: 1, seed: 780, label: "the fisher's shack by the quay" });
 
   // Special structures
   props.push({ kind: 'windmill', x: 80.5, z: 22.5, blocked: [80, 22, 2, 2] });
@@ -345,38 +345,89 @@ export function buildIsland() {
     blocked[k] = 1;
     return true;
   }
+  // The Whispering Woods: old-growth giants and the great Spirit Tree on its mossy hill.
+  const clearing = new Set();
+  const clear = (cx, cz, r) => { for (let dz = -r; dz <= r; dz++) for (let dx = -r; dx <= r; dx++) if (dx * dx + dz * dz <= r * r + 1) clearing.add(idx(cx + dx, cz + dz)); };
+  landmarks.spiritTree = { x: 19.5, z: 20.6 };
+  if (canTree(19, 20)) {
+    trees.push({ kind: 'spirittree', x: 19.5, z: 20.6, seed: 7, giant: true });
+    block(18, 20, 3, 1);
+    clear(19, 22, 4);
+    props.push({ kind: 'stonelantern', x: 17.3, z: 23.4 });
+    props.push({ kind: 'stonelantern', x: 21.7, z: 23.4 });
+    block(17, 23, 1, 1); block(21, 23, 1, 1);
+  }
+  for (const [x, z] of [[11, 25], [26, 21], [29, 30], [14, 34], [23, 36], [8, 31], [31, 25], [12, 19]]) {
+    if (!canTree(x, z) || !canTree(x + 1, z) || zone[idx(x, z)] !== 'forest') continue;
+    trees.push({ kind: 'ancient', x: x + 1, z: z + 0.6, seed: x * 31 + z, giant: true });
+    block(x, z, 2, 1);
+    clear(x, z, 2);
+  }
   for (let z = 0; z < H; z++) for (let x = 0; x < W; x++) {
     const i = idx(x, z);
-    if (!canTree(x, z)) continue;
+    if (!canTree(x, z) || clearing.has(i)) continue;
     const zn = zone[i];
     const nearPath = (() => { for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) { const j = idx(clamp(x + dx, 0, W - 1), clamp(z + dz, 0, H - 1)); if (type[j] === T.DIRT || type[j] === T.COBBLE) return true; } return false; })();
     if (nearPath) continue;
     const r = R();
     const dens = fbm(x * 0.12, z * 0.12, 55);
     if (zn === 'forest') {
-      if (r < 0.28 + dens * 0.2) addTree(R() < 0.55 ? 'pine' : 'oak', x, z);
+      if (r < 0.2 + dens * 0.18) addTree(R() < 0.45 ? 'pine' : 'oak', x, z);
     } else if (zn === 'ridge') {
       if (r < 0.1) addTree('pine', x, z);
     } else if (zn === 'meadow') {
-      if (r < 0.025) addTree('oak', x, z);
+      if (r < 0.028) { const k = R(); addTree(k < 0.55 ? 'oak' : k < 0.8 ? 'goldtree' : 'blossom', x, z); }
     } else if (zn === 'hill') {
-      if (r < 0.05 && !nearBlocked(x, z, 1)) addTree(R() < 0.6 ? 'cypress' : 'oak', x, z);
+      if (r < 0.05 && !nearBlocked(x, z, 1)) { const k = R(); addTree(k < 0.4 ? 'blossom' : k < 0.75 ? 'cypress' : 'oak', x, z); }
     } else if (zn === 'town') {
-      if (r < 0.035 && !nearBlocked(x, z, 1) && type[i] === T.GRASS) addTree('cypress', x, z);
+      if (r < 0.04 && !nearBlocked(x, z, 1) && type[i] === T.GRASS) addTree(R() < 0.55 ? 'blossom' : 'cypress', x, z);
     } else if (zn === 'beach') {
       if (r < 0.02 && height[i] >= 1) addTree('oak', x, z);
     } else if (zn === 'islet') {
       if (x === 15 && z === 75) addTree('orange', x, z);
     } else if (height[i] >= 1 && r < 0.04 && !nearBlocked(x, z, 1)) {
-      addTree(R() < 0.5 ? 'oak' : 'cypress', x, z);
+      const k = R(); addTree(k < 0.45 ? 'oak' : k < 0.7 ? 'blossom' : 'cypress', x, z);
     }
   }
   // Orchard by the farm
   for (const [x, z] of [[76, 33], [78, 31], [80, 33], [76, 36], [79, 37]]) {
     if (canTree(x, z)) addTree('apple', x, z, { forage: 'apple' });
   }
-  // Hotel garden apple tree & cypress sentinels
-  for (const [x, z] of [[42, 18], [58, 18]]) { const i = idx(x, z); blocked[i] = 0; addTree('cypress', x, z); }
+  // Hotel garden blossom trees
+  for (const [x, z] of [[42, 18], [58, 18]]) { const i = idx(x, z); blocked[i] = 0; addTree('blossom', x, z); }
+
+  // Hushlings: eight shy forest spirits hiding around the Whispering Woods
+  const spirits = [];
+  const RS = rng(8080);
+  const spiritSpots = [[20, 24], [15, 22], [12, 27], [26, 23], [28, 32], [15, 35], [9, 32], [22, 38], [31, 27], [11, 21]];
+  const okSpirit = (x, z) => { const i = idx(x, z); return inb(x, z) && land[i] && !blocked[i] && zone[i] === 'forest' && height[i] % 1 === 0 && type[i] !== T.DIRT && !spirits.some((p) => Math.abs(p.x - x) + Math.abs(p.z - z) < 4); };
+  for (const [sx, sz] of spiritSpots) {
+    if (spirits.length >= 8) break;
+    let found = null;
+    for (let rr = 0; rr <= 3 && !found; rr++) for (let dz = -rr; dz <= rr && !found; dz++) for (let dx = -rr; dx <= rr && !found; dx++) {
+      if (Math.max(Math.abs(dx), Math.abs(dz)) !== rr) continue;
+      if (okSpirit(sx + dx, sz + dz)) found = [sx + dx, sz + dz];
+    }
+    if (found) spirits.push({ x: found[0] + 0.5 + RS.range(-0.2, 0.2), z: found[1] + 0.5 });
+  }
+
+  // Small non-blocking flora: ferns, toadstools and luminous mushrooms in the woods, flowering shrubs elsewhere
+  const flora = [];
+  const RF = rng(777);
+  for (let z = 0; z < H; z++) for (let x = 0; x < W; x++) {
+    const i = idx(x, z);
+    if (!land[i] || blocked[i] || type[i] === T.DIRT || type[i] === T.COBBLE || type[i] === T.PLAZA || type[i] === T.PLANKS || height[i] % 1 !== 0) continue;
+    const zn = zone[i], k = RF();
+    if (zn === 'forest') {
+      if (k < 0.1) flora.push({ kind: 'fern', x: x + RF.range(0.2, 0.8), z: z + RF.range(0.2, 0.8) });
+      else if (k < 0.14) flora.push({ kind: 'glowshroom', x: x + RF.range(0.2, 0.8), z: z + RF.range(0.2, 0.8), glow: true });
+      else if (k < 0.16) flora.push({ kind: 'toadstool', x: x + 0.5, z: z + 0.5 });
+    } else if ((zn === 'meadow' || zn === 'hill' || zn === 'hotel') && k < 0.025) {
+      flora.push({ kind: 'flowerbush', x: x + 0.5, z: z + 0.5 });
+    } else if (zn === 'town' && type[i] === T.GRASS && k < 0.03) {
+      flora.push({ kind: 'flowerbush', x: x + 0.5, z: z + 0.5 });
+    }
+  }
   const trees2 = trees.filter((t) => t.kind === 'oak' && zone[idx(t.x | 0, t.z | 0)] === 'forest');
   trees2.slice(0, 12).forEach((t) => (t.forage = 'acorn'));
   trees.filter((t) => t.kind === 'pine').slice(0, 10).forEach((t) => (t.forage = 'pinecone'));
@@ -451,7 +502,7 @@ export function buildIsland() {
   landmarks.stall = { x: 45.5, z: 40.5 };
 
   return {
-    W, H, LEVEL, type, height, blocked, land, zone, coast, buildings, trees, props, nodes, npcs, homes, paths, landmarks,
+    W, H, LEVEL, type, height, blocked, land, zone, coast, buildings, trees, props, nodes, npcs, homes, paths, landmarks, flora, spirits,
     idx, inb, groundAt,
   };
 }

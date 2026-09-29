@@ -1,0 +1,9 @@
+[
+ {"wait": 6000},
+ {"click": "[data-a=new]"},
+ {"click": "[data-a=go]"},
+ {"wait": 1500},
+ {"eval": "(async()=>{const g=__game; const tick=()=>new Promise(r=>setTimeout(r,0)); for(let i=0;i<60 && (g.ui.dialogOpen||g.cutscene||g.transitioning);i++){ g.ui.advance(); g.debugStep(0.2); await tick(); } g.exitHotel(); g.debugStep(1.5); const a=g.world.spirits[0]; const w=g.world.witch; w.place(a.pos.x+0.8, a.pos.z+0.5); g.world.snapCamera(); g.debugStep(0.4); const lbl=g.current&&g.current.label; await g.interact(); g.debugStep(0.3); const res={lbl, greeted: Object.keys(g.state.spirits).length, total: g.world.spirits.length}; for (const s of g.world.spirits.slice(1)) g.greetSpirit(s); res.after=Object.keys(g.state.spirits).length; res.goal=!!g.state.goals.spirits; return JSON.stringify(res);})()"},
+ {"wait": 1200},
+ {"shot": "sp_greet"}
+]

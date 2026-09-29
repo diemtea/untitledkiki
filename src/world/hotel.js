@@ -9,6 +9,7 @@ import { Witch } from '../entities/witch.js';
 import { Actor } from '../entities/actor.js';
 import { damp, clamp, dist, rng } from '../core/util.js';
 import { applySeeThroughTree, updateSeeThrough } from '../gfx/seethrough.js';
+import { GlowField } from '../gfx/glow.js';
 
 export const HW = 47; // interior width (tiles)
 export const HD = 12; // interior depth
@@ -420,6 +421,41 @@ export class Hotel {
     this.sun.shadow.normalBias = 0.03;
     S.add(this.sun, this.sun.target);
 
+    // --- whimsy: fairy lights, bunting, dried herbs, floating sparkles
+    const glow = (this.glow = new GlowField());
+    const bulbs = ['#ffe48a', '#ffb8e0', '#a8f0ff', '#c8ffb0', '#ffc890'];
+    let k = 0;
+    for (let x = 1.2; x < HW - 1.2; x += 0.62) {
+      const f = ((x - 1.2) % 4) / 4;
+      glow.add(x, 2.55 - Math.sin(f * Math.PI) * 0.3, 1.14, bulbs[k++ % bulbs.length], 0.3, 0, false, k * 1.7);
+    }
+    for (let i = 0; i < 10; i++) glow.add(12 + Math.random() * 9, 1.2 + Math.random() * 1.2, 4 + Math.random() * 4, '#fff4c0', 0.14, 1, false);
+    S.add(glow.build());
+    const bunting = drawTexture(64, 10, (g) => {
+      const cols = ['#e8503a', '#ffd84a', '#3cb8a8', '#8a5ad0', '#ff82a8', '#3a70d8'];
+      rect(g, 0, 0, 64, 1, '#6a4a5a');
+      for (let i = 0; i < 8; i++) {
+        const x0 = i * 8 + 1;
+        for (let y = 1; y < 8; y++) { const hw = Math.round(3 * (1 - y / 8)); rect(g, x0 + 3 - hw, y, hw * 2 + 1, 1, cols[i % cols.length]); }
+        px(g, x0 + 2, 2, '#fffaf0');
+      }
+    }, { repeat: true });
+    bunting.repeat.set(3, 1);
+    const bmesh = new THREE.Mesh(new THREE.PlaneGeometry(11, 0.7), lam({ map: bunting, transparent: true, alphaTest: 0.5, side: THREE.DoubleSide }));
+    bmesh.position.set(16, 2.2, 1.1);
+    bmesh.material.userData.seeThrough = true;
+    S.add(bmesh);
+    const herbs = canvasOf(26, 14, (g) => {
+      rect(g, 0, 0, 26, 1, '#8a5a36');
+      for (const [x, cA, cB] of [[3, '#4fae48', '#86d64e'], [11, '#a888d8', '#d0b8ff'], [19, '#3cb878', '#b4ec62']]) {
+        rect(g, x + 1, 1, 1, 3, '#c8a86a');
+        for (let y = 4; y < 13; y++) { const hw = Math.round(1 + (y - 4) * 0.25); rect(g, x + 1 - hw, y, hw * 2 + 1, 1, y % 2 ? cA : cB); }
+      }
+    });
+    this.sprite(herbs, 9.4, 1.12, { y: 1.35, shadow: false, key: 'herbs' });
+    this.sprite(treeCanvas('flowerbush', 3), 20.6, 5.6, { key: 'fbush1' });
+    this.block(20, 5, 1, 1);
+
     applySeeThroughTree(this.scene);
     this.messPool = [];
   }
@@ -562,16 +598,20 @@ export class Hotel {
     this.beamMat.opacity = day ? 0.55 * beamK : 0;
     this.beamMat.color.copy(S ? S.sun : new THREE.Color(1, 1, 1));
     this.sun.color.copy(S ? S.sun : new THREE.Color('#fff'));
-    this.hemi.intensity = day ? 0.95 : 0.8;
-    this.hemi.color.set(day ? '#fff0dc' : '#b0a0c8');
+    this.hemi.intensity = day ? 1.0 : 0.95;
+    this.hemi.color.set(day ? '#fff0dc' : '#c8b8e8');
     this.nightLight.intensity = day ? 0 : 5;
     const post = this.game.renderer.post;
-    post.tint.value.set(day ? 1.02 : 0.92, day ? 0.99 : 0.9, day ? 0.95 : 1.0);
-    post.lift.value.set(0.02, 0.01, 0.03);
-    post.saturation.value = 1.08;
+    post.tint.value.set(day ? 1.03 : 0.94, day ? 1.0 : 0.9, day ? 0.95 : 1.02);
+    post.lift.value.set(0.02, 0.01, 0.04);
+    post.saturation.value = 1.2;
+    post.shadowTint.value.set(0.9, 0.8, 1.22);
+    post.highlightTint.value.set(1.08, 1.0, 0.88);
+    post.dream.value = day ? 0.16 : 0.22;
     this.fx.update(dt, t);
     this.glowFx.update(dt, t);
     this.updateCamera(dt);
+    this.glow.update(t, S ? Math.max(S.night, 0.35) : 0.5, this.fx.uniforms.uScale.value);
   }
 
   updateCamera(dt) {

@@ -262,6 +262,8 @@ export class Audio {
       case 'sweep': this.noise(0.25, 0.3, 1200, 3000, 0, 'highpass'); this.noise(0.25, 0.3, 1200, 3000, 0.25, 'highpass'); break;
       case 'munch': [0, 0.12, 0.24].forEach((t) => this.noise(0.07, 0.35, 900, 500, t)); break;
       case 'drop': this.tone('sine', 900, 300, 0.4, 0.12); break;
+      case 'rattle': for (let i = 0; i < 5; i++) { this.tone('square', 1400 + (i % 2) * 300, 900, 0.03, 0.035, i * 0.07); this.noise(0.03, 0.08, 3000, 2000, i * 0.07); } break;
+      case 'spirit': [0, 7, 12, 16, 19].forEach((s, i) => this.tone('sine', 523 * Math.pow(2, s / 12), null, 0.6, 0.07, i * 0.09)); break;
       default: this.tone('sine', 600, null, 0.1, 0.1);
     }
   }

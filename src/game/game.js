@@ -434,6 +434,7 @@ export class Game {
       const p = n.actor ? n.actor.pos : n;
       list.push({ x: p.x, z: p.z, r: n.actor ? 1.5 : 1.25, label: this.gatherLabel(n), act: () => this.forage(k) });
     });
+    for (const a of w.spirits || []) list.push({ x: a.pos.x, z: a.pos.z, r: 1.4, label: s.spirits && s.spirits[a.spiritIndex] ? 'Wave to the hushling' : 'Greet the forest spirit', act: () => this.greetSpirit(a) });
     for (const st of this.stars) if (!st.taken && st.landed) list.push({ x: st.x, z: st.z, r: 1.6, label: 'Pick up the Star Shard', act: () => this.takeStar(st) });
     const chest = this.chest;
     if (chest && !s.flags.chestOpened) list.push({ x: chest.x, z: chest.z, r: 1.5, label: 'Old sea chest', act: () => this.openChest() });
@@ -695,6 +696,28 @@ export class Game {
     this.completeGoal('starshard');
     this.ui.toast('+1 Star Shard! It hums with warmth.', 'starshard', { gold: true });
     this.state.today.found++;
+  }
+
+  greetSpirit(a) {
+    const s = this.state;
+    s.spirits ||= {};
+    a.rattleT = 1.2;
+    a.coolT = 3;
+    this.audio.sfx('rattle');
+    this.world.glowFx.burst(a.pos.x, a.pos.y + 0.8, a.pos.z, 16, { color: '#dffff0', size: 0.16, life: 1.1, speed: 1.4, up: 2.2, gravity: 0.6, shape: 2 });
+    if (s.spirits[a.spiritIndex]) { this.ui.toast('The hushling rattles happily.', 'icon:sparkle'); return; }
+    s.spirits[a.spiritIndex] = s.day;
+    const n = Object.keys(s.spirits).length;
+    const total = this.world.spirits.length;
+    this.audio.sfx('spirit');
+    const [gift, words] = pick([['moss', 'a tuft of soft moss'], ['mushroom', 'a mushroom'], ['berries', 'a handful of berries'], ['acorn', 'an acorn']]);
+    this.giveItem(gift, 1, { quiet: true });
+    this.ui.toast(`A hushling rattles its head and leaves you ${words}. Forest spirits greeted: ${n}/${total}`, gift, { gold: true, life: 4.5 });
+    if (n >= total) {
+      this.completeGoal('spirits');
+      this.addRep(2, 'The forest spirits trust you');
+    }
+    this.markDirty();
   }
 
   async openChest() {

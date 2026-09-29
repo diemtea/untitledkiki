@@ -34,5 +34,7 @@ ITEM_ART_IDS.forEach((id) => put(itemCanvas(id), id.slice(0, 9), 3));
 br();
 ['heart','coin','star','bowl','zzz','sad','exclaim','paw','sparkle','mess','pin','arrow','sun','moon','cloud','rain','bag'].forEach((id) => put(iconCanvas(id), id, 3));
 br();
-['oak','apple','orange','pine','cypress','bush','berrybush','sunflower','reeds'].forEach((k, i) => put(treeCanvas(k, i + 3), k, 3));
+['oak','apple','blossom','goldtree','pine','cypress','bush','berrybush','flowerbush','sunflower','fern','glowshroom','toadstool','reeds'].forEach((k, i) => put(treeCanvas(k, i + 3), k, 3));
+br();
+['ancient','spirittree'].forEach((k, i) => put(treeCanvas(k, i + 9), k, 3));
 document.title = 'ready';

@@ -636,145 +636,273 @@ const ICON_ART = {
 };
 
 // ---------------------------------------------------------------------------------------------
-// Procedural trees & plants (pixel-art blobs with top-left lighting)
+// Procedural trees & plants — storybook style: puffy clustered canopies with hue-shifted shading
 // ---------------------------------------------------------------------------------------------
-function blobCanopy(g, w, h, cx, cy, rx, ry, cols, seed, nBlobs = 9) {
+// 5-tone palettes: [rim/deep shadow, shadow, mid, light, highlight]
+export const LEAF = {
+  green: ['#1f5a5a', '#2f8050', '#4fae48', '#86d452', '#c8f07a'],
+  forest: ['#163e4a', '#215e4e', '#2f8252', '#56a856', '#9cd46a'],
+  blossom: ['#9a4078', '#d2689c', '#f59ac2', '#fcc6dc', '#fff0f6'],
+  gold: ['#8a4a2a', '#c07a2a', '#eaa83a', '#f8d060', '#fff4a8'],
+  teal: ['#153c4c', '#1f5e62', '#2e8468', '#54ac78', '#9ad8a0'],
+  hedge: ['#1f5a5a', '#2f8050', '#4aa848', '#7ccc52', '#b8ec72'],
+};
+const BARK = ['#4a2e44', '#6e4648', '#8e5c4c', '#b07a5a'];
+
+function puffCanopy(g, w, h, cx, cy, rx, ry, pal, seed, n = 9, spread = 0.62) {
   const r = rng(seed);
   const blobs = [];
-  for (let i = 0; i < nBlobs; i++) {
+  for (let i = 0; i < n; i++) {
     const a = r() * Math.PI * 2;
     const d = Math.sqrt(r());
-    blobs.push({ x: cx + Math.cos(a) * rx * 0.62 * d, y: cy + Math.sin(a) * ry * 0.62 * d, r: Math.min(rx, ry) * r.range(0.42, 0.58) });
+    blobs.push({ x: cx + Math.cos(a) * rx * spread * d, y: cy + Math.sin(a) * ry * spread * d, r: Math.min(rx, ry) * r.range(0.4, 0.56) });
   }
-  blobs.push({ x: cx, y: cy, r: Math.min(rx, ry) * 0.62 });
-  // render: each pixel shaded by distance to the blob's light side
-  const [dark, mid, light, hi] = cols;
-  for (let y = 0; y < h; y++) {
-    for (let x = 0; x < w; x++) {
-      let best = null;
-      for (const b of blobs) {
-        const dx = x - b.x, dy = y - b.y;
-        const dd = (dx * dx + dy * dy) / (b.r * b.r);
-        if (dd <= 1 && (!best || b.y > best.b.y - 0.001)) best = { b, dx, dy, dd };
-      }
-      if (!best) continue;
-      const { b, dx, dy } = best;
-      const lx = (dx + b.r * 0.35) / b.r, ly = (dy + b.r * 0.45) / b.r;
-      const lit = Math.sqrt(lx * lx + ly * ly);
-      const dither = ((x + y) & 1) * 0.08;
-      let col = mid;
-      if (lit < 0.42 + dither) col = hi;
-      else if (lit < 0.8 + dither) col = light;
-      else if (dy > b.r * 0.2 || dx > b.r * 0.5) col = dark;
-      g.fillStyle = col;
-      g.fillRect(x, y, 1, 1);
+  blobs.push({ x: cx, y: cy + ry * 0.12, r: Math.min(rx, ry) * 0.6 });
+  // a couple of crown puffs on top for a rounder silhouette
+  blobs.push({ x: cx - rx * 0.25, y: cy - ry * 0.55, r: Math.min(rx, ry) * 0.42 });
+  blobs.push({ x: cx + rx * 0.2, y: cy - ry * 0.6, r: Math.min(rx, ry) * 0.38 });
+  // keep every puff inside the canvas (with a pixel of room for the outline)
+  const minY = Math.min(...blobs.map((b) => b.y - b.r));
+  if (minY < 2) for (const b of blobs) b.y += 2 - minY;
+  for (const b of blobs) { b.x = Math.max(b.r + 1, Math.min(w - b.r - 2, b.x)); }
+  blobs.sort((a, b) => a.y - b.y);
+  const [rim, dark, mid, light, hi] = pal;
+  const px_ = (x, y, c) => { if (x >= 0 && y >= 0 && x < w && y < h) { g.fillStyle = c; g.fillRect(x, y, 1, 1); } };
+  for (const b of blobs) {
+    const R = Math.ceil(b.r);
+    for (let y = -R; y <= R; y++) for (let x = -R; x <= R; x++) {
+      const dd = Math.sqrt(x * x + y * y) / b.r;
+      if (dd > 1) continue;
+      const X = Math.round(b.x + x), Y = Math.round(b.y + y);
+      const nx = x / b.r, ny = y / b.r;
+      const l = -(nx * 0.55 + ny * 0.8) + 0.15; // light from the upper left
+      const dither = ((X + Y) & 1) * 0.1;
+      let c = mid;
+      if (l > 0.66 + dither) c = hi;
+      else if (l > 0.3 + dither) c = light;
+      else if (l < -0.28 + dither) c = dark;
+      if (dd > 0.84 && (ny > 0.05 || nx > 0.3)) c = rim;
+      // leafy scallop texture
+      if (c !== rim && c !== hi && ((X * 3 + Y * 5) % 9 === 0)) c = c === light ? mid : dark;
+      px_(X, Y, c);
     }
   }
   return blobs;
 }
 
+function trunk(g, cx, top, bottom, width, flare = 3) {
+  const [deep, shade, base, lit] = BARK;
+  for (let y = top; y < bottom; y++) {
+    const t = (y - top) / Math.max(1, bottom - top);
+    const hw = width / 2 + Math.pow(t, 3) * flare;
+    for (let x = Math.round(cx - hw); x <= Math.round(cx + hw); x++) {
+      const u = (x - (cx - hw)) / (hw * 2);
+      let c = base;
+      if (u < 0.28) c = lit;
+      else if (u > 0.7) c = shade;
+      if (u > 0.88) c = deep;
+      if (((x * 7 + Math.floor(y / 3)) % 5 === 0) && u > 0.2 && u < 0.85) c = shade;
+      g.fillStyle = c;
+      g.fillRect(x, y, 1, 1);
+    }
+  }
+}
+
+function fruit(g, blobs, r, n, cols) {
+  for (let i = 0; i < n; i++) {
+    const b = blobs[(i * 3 + 1) % blobs.length];
+    const fx = Math.round(b.x + r.range(-b.r * 0.5, b.r * 0.5)), fy = Math.round(b.y + r.range(-b.r * 0.2, b.r * 0.6));
+    rect(g, fx, fy, 3, 3, cols[0]);
+    px(g, fx + 2, fy + 2, cols[2]); px(g, fx + 1, fy + 2, cols[2]);
+    px(g, fx, fy, cols[1]);
+  }
+}
+
 export function makeTree(kind, seed = 1) {
   const r = rng(seed);
   let c;
-  if (kind === 'oak' || kind === 'apple' || kind === 'orange') {
-    const w = 40, h = 52;
+  if (kind === 'oak' || kind === 'apple' || kind === 'orange' || kind === 'blossom' || kind === 'goldtree') {
+    const w = 46, h = 60;
     c = makeCanvas(w, h);
     const g = ctx2d(c);
-    // trunk
-    rect(g, 17, 30, 6, 21, '#7a4d2e');
-    rect(g, 17, 30, 2, 21, '#96633b');
-    rect(g, 21, 30, 2, 21, '#5a3620');
-    rect(g, 14, 48, 12, 3, '#6a4228');
-    rect(g, 23, 36, 5, 2, '#7a4d2e');
-    const pal = kind === 'oak'
-      ? ['#3f6b2c', '#56893a', '#74a947', '#9cc85a']
-      : ['#3d6a33', '#528a3f', '#6fa84c', '#94c663'];
-    const blobs = blobCanopy(g, w, 40, 20, 18, 17, 15, pal, seed, 10);
-    if (kind !== 'oak') {
-      const fruit = kind === 'apple' ? ['#d9393c', '#ff7a6b'] : ['#f08a3a', '#ffc070'];
-      for (let i = 0; i < 9; i++) {
-        const b = blobs[i % blobs.length];
-        const fx = Math.round(b.x + r.range(-b.r * 0.6, b.r * 0.6)), fy = Math.round(b.y + r.range(-b.r * 0.3, b.r * 0.7));
-        rect(g, fx, fy, 2, 2, fruit[0]);
-        px(g, fx, fy, fruit[1]);
-      }
-    }
+    trunk(g, 23, 34, 58, 6, 4);
+    // a stubby branch and a knot
+    rect(g, 26, 40, 5, 2, BARK[2]); rect(g, 30, 38, 2, 3, BARK[2]);
+    px(g, 22, 48, BARK[0]); px(g, 23, 48, BARK[1]);
+    const pal = kind === 'blossom' ? LEAF.blossom : kind === 'goldtree' ? LEAF.gold : LEAF.green;
+    const blobs = puffCanopy(g, w, 50, 23, 24, 19, 16, pal, seed, 10);
+    if (kind === 'apple') fruit(g, blobs, r, 8, ['#ee3a48', '#ff9a8a', '#a82040']);
+    if (kind === 'orange') fruit(g, blobs, r, 8, ['#ff9a2a', '#ffd070', '#c05a1a']);
+    if (kind === 'blossom') for (let i = 0; i < 10; i++) { const b = blobs[i % blobs.length]; px(g, Math.round(b.x + r.range(-4, 4)), Math.round(b.y + r.range(-3, 3)), '#ffffff'); }
   } else if (kind === 'pine') {
-    const w = 30, h = 54;
+    // stylised fir: stacked drooping tiers in teal, bright rim on the lit side
+    const w = 32, h = 58;
     c = makeCanvas(w, h);
     const g = ctx2d(c);
-    rect(g, 13, 42, 4, 11, '#6a4228');
-    rect(g, 13, 42, 1, 11, '#8a5a36');
+    trunk(g, 16, 44, 57, 4, 2);
+    const [rim, dark, mid, light, hi] = LEAF.teal;
     const tiers = 5;
     for (let t = 0; t < tiers; t++) {
-      const top = 2 + t * 8, bh = 14, half = 5 + t * 2.4;
+      const top = 1 + t * 8.5, bh = 15, half = 4 + t * 2.7;
       for (let y = 0; y < bh; y++) {
-        const hw = (y / bh) * half + 1;
+        const hw = Math.pow(y / bh, 0.8) * half + 1;
         for (let x = -Math.round(hw); x <= Math.round(hw); x++) {
-          const edge = y > bh - 3 && ((x + y + t) % 3 === 0);
-          if (edge && Math.abs(x) > hw - 2) continue;
-          let col = '#3d6b3f';
-          if (x < -hw * 0.2) col = '#548a4c';
-          if (x < -hw * 0.55 && y < bh - 2) col = '#6fa65c';
-          if (x > hw * 0.45) col = '#2c5033';
-          if (y > bh - 3) col = x < 0 ? '#3d6b3f' : '#284a2f';
-          px(g, 15 + x, top + y, col);
+          // scalloped drooping tips along the bottom edge
+          if (y > bh - 3 && ((x + 40) % 4 === 0) && y === bh - 1) continue;
+          const u = x / (hw + 0.01);
+          let col = mid;
+          if (u < -0.15) col = light;
+          if (u < -0.6 && y < bh - 3) col = hi;
+          if (u > 0.4) col = dark;
+          if (y >= bh - 2) col = u < 0 ? mid : rim;
+          if ((x * 5 + y * 3 + t) % 11 === 0 && col !== hi) col = dark;
+          px(g, 16 + x, Math.round(top + y), col);
         }
       }
     }
   } else if (kind === 'cypress') {
-    const w = 16, h = 56;
+    const w = 18, h = 58;
     c = makeCanvas(w, h);
     const g = ctx2d(c);
-    rect(g, 7, 48, 2, 7, '#6a4228');
-    for (let y = 0; y < 50; y++) {
-      const t = y / 50;
-      const hw = Math.sin(Math.min(1, t * 1.3) * Math.PI * 0.62) * 6.2 + 0.5;
+    trunk(g, 9, 50, 57, 3, 1);
+    const [rim, dark, mid, light, hi] = LEAF.green;
+    for (let y = 0; y < 52; y++) {
+      const t = y / 52;
+      const hw = Math.sin(Math.min(1, t * 1.25) * Math.PI * 0.62) * 6.8 + 0.6;
       for (let x = -Math.round(hw); x <= Math.round(hw); x++) {
-        let col = '#34603a';
-        if (x < -hw * 0.3) col = '#4c7f45';
-        if (x < -hw * 0.7 && (y % 4) < 3) col = '#66994f';
-        if (x > hw * 0.4) col = '#244a2e';
-        if ((y + x * 3) % 7 === 0) col = '#2a5233';
-        px(g, 8 + x, y + 1, col);
+        const u = x / (hw + 0.01);
+        let col = mid;
+        if (u < -0.25) col = light;
+        if (u < -0.65 && (y % 5) < 3) col = hi;
+        if (u > 0.4) col = dark;
+        if (u > 0.8 || y > 49) col = rim;
+        if ((y + x * 3) % 7 === 0 && col === mid) col = dark;
+        px(g, 9 + x, y + 1, col);
       }
     }
-  } else if (kind === 'bush' || kind === 'berrybush' || kind === 'hedge') {
-    const w = kind === 'hedge' ? 18 : 20, h = 16;
+  } else if (kind === 'ancient' || kind === 'spirittree') {
+    // Old-growth giants of the Whispering Woods: buttress roots, mossy bark, vast canopy, hanging moss.
+    const big = kind === 'spirittree';
+    const w = big ? 112 : 76, h = big ? 168 : 120;
     c = makeCanvas(w, h);
     const g = ctx2d(c);
-    const blobs = blobCanopy(g, w, h, w / 2, 9, w / 2 - 1, 7, ['#3f6b2c', '#56893a', '#74a947', '#9cc85a'], seed, 6);
-    if (kind === 'berrybush') {
-      for (let i = 0; i < 7; i++) {
-        const b = blobs[i % blobs.length];
-        const fx = Math.round(b.x + r.range(-3, 3)), fy = Math.round(b.y + r.range(-2, 3));
-        px(g, fx, fy, '#7b4bb0');
-        px(g, fx + 1, fy, '#9a6ac0');
-        px(g, fx, fy + 1, '#5a3288');
+    const cx = w / 2;
+    const tw = big ? 20 : 13;
+    const trunkTop = Math.round(h * 0.4);
+    trunk(g, cx, trunkTop, h - 2, tw, big ? 22 : 14);
+    // roots snaking along the ground
+    for (let k = 0; k < (big ? 6 : 4); k++) {
+      const dir = k % 2 ? 1 : -1;
+      let x = cx + dir * (tw / 2 - 1), y = h - 12 - r.int(0, 6);
+      for (let i = 0; i < (big ? 26 : 16); i++) {
+        rect(g, Math.round(x), Math.round(y), 3, 2, i % 3 ? BARK[2] : BARK[1]);
+        px(g, Math.round(x), Math.round(y), BARK[3]);
+        x += dir * r.range(0.8, 1.4); y += r.range(0.1, 0.7);
+        if (y > h - 3) y = h - 3;
       }
+    }
+    // bark grooves and moss patches
+    for (let i = 0; i < (big ? 40 : 22); i++) {
+      const x = Math.round(cx + r.range(-tw / 2, tw / 2)), y = r.int(trunkTop + 4, h - 10);
+      rect(g, x, y, 1, r.int(3, 8), BARK[1]);
+    }
+    for (let i = 0; i < (big ? 16 : 9); i++) {
+      const x = Math.round(cx + r.range(-tw / 2 - 2, tw / 2)), y = r.int(trunkTop + 2, h - 8);
+      for (const [dx, dy, col] of [[0, 0, '#4aa848'], [1, 0, '#7ccc52'], [0, 1, '#2f8050'], [-1, 1, '#4aa848'], [1, 1, '#4aa848'], [2, 1, '#2f8050']]) px(g, x + dx, y + dy, col);
+    }
+    // a hollow knot
+    disc(g, cx + 2, trunkTop + (big ? 40 : 26), big ? 3.5 : 2.5, '#2a1a30');
+    const blobs = puffCanopy(g, w, Math.round(h * 0.7), cx, h * 0.32, w * 0.5 - 3, h * 0.27, LEAF.forest, seed, big ? 26 : 18, 0.78);
+    // hanging moss strands under the canopy
+    for (let i = 0; i < (big ? 22 : 12); i++) {
+      const b = blobs[r.int(0, blobs.length - 1)];
+      const x = Math.round(b.x + r.range(-b.r * 0.7, b.r * 0.7)), y0 = Math.round(b.y + b.r * 0.7);
+      const len = r.int(4, big ? 16 : 11);
+      for (let y = 0; y < len; y++) px(g, x + (y % 5 === 4 ? 1 : 0), y0 + y, y % 2 ? '#a8dca0' : '#7cc082');
+    }
+    if (big) {
+      // a braided rope around the sacred trunk, with little paper charms
+      const ry = trunkTop + 24;
+      for (let x = -tw / 2 - 3; x <= tw / 2 + 3; x++) {
+        const X = Math.round(cx + x), Y = Math.round(ry + Math.abs(x) * 0.18);
+        px(g, X, Y, (x & 1) ? '#f4e2b0' : '#c8a86a'); px(g, X, Y + 1, (x & 1) ? '#c8a86a' : '#a8884a');
+      }
+      for (const x of [-8, -2, 5, 11]) { rect(g, Math.round(cx + x), ry + 3, 2, 5, '#fffdf6'); px(g, Math.round(cx + x) + 1, ry + 8, '#e8e0d0'); }
+      // luminous blossoms dotted through the crown
+      for (let i = 0; i < 26; i++) { const b = blobs[i % blobs.length]; const x = Math.round(b.x + r.range(-b.r * 0.6, b.r * 0.6)), y = Math.round(b.y + r.range(-b.r * 0.5, b.r * 0.5)); px(g, x, y, '#dffcff'); px(g, x + 1, y, '#9cf0e8'); }
+    }
+  } else if (kind === 'bush' || kind === 'berrybush' || kind === 'hedge' || kind === 'flowerbush') {
+    const w = kind === 'hedge' ? 18 : 22, h = 18;
+    c = makeCanvas(w, h);
+    const g = ctx2d(c);
+    const blobs = puffCanopy(g, w, h, w / 2, 11, w / 2 - 1, 7, LEAF.hedge, seed, 5);
+    if (kind === 'berrybush') for (let i = 0; i < 8; i++) {
+      const b = blobs[i % blobs.length];
+      const fx = Math.round(b.x + r.range(-3, 3)), fy = Math.round(b.y + r.range(-2, 3));
+      rect(g, fx, fy, 2, 2, '#8a4ad0'); px(g, fx, fy, '#c890ff'); px(g, fx + 1, fy + 1, '#5a2a98');
+    }
+    if (kind === 'flowerbush') for (let i = 0; i < 7; i++) {
+      const b = blobs[i % blobs.length];
+      const fx = Math.round(b.x + r.range(-3, 3)), fy = Math.round(b.y + r.range(-3, 2));
+      const [p, cc] = r.pick([['#ff8ab8', '#ffe070'], ['#fff8f0', '#ffd24a'], ['#8ab4ff', '#fff8f0']]);
+      px(g, fx, fy - 1, p); px(g, fx - 1, fy, p); px(g, fx + 1, fy, p); px(g, fx, fy + 1, p); px(g, fx, fy, cc);
     }
   } else if (kind === 'sunflower') {
-    const w = 12, h = 26;
+    const w = 14, h = 28;
     c = makeCanvas(w, h);
     const g = ctx2d(c);
-    rect(g, 5, 8, 2, 18, '#4a8a34');
-    rect(g, 2, 14, 3, 2, '#5aa84a');
-    rect(g, 7, 18, 3, 2, '#5aa84a');
-    disc(g, 5.5, 5, 4.5, '#f5c542');
-    disc(g, 5.5, 5, 2.2, '#7a4a22');
-    px(g, 4, 4, '#9a6a3a');
+    rect(g, 6, 9, 2, 19, '#3f9a45');
+    rect(g, 2, 15, 4, 2, '#5dbb46'); rect(g, 8, 19, 4, 2, '#5dbb46'); px(g, 2, 14, '#86d64e'); px(g, 11, 18, '#86d64e');
+    for (let k = 0; k < 12; k++) { const a = (k / 12) * Math.PI * 2; disc(g, 6.5 + Math.cos(a) * 4, 5.5 + Math.sin(a) * 4, 1.3, k % 2 ? '#ffd84a' : '#ffb830'); }
+    disc(g, 6.5, 5.5, 2.6, '#8a4a2a'); px(g, 5, 4, '#b06a3a'); px(g, 7, 6, '#5a2a1a');
   } else if (kind === 'reeds') {
     const w = 10, h = 16;
     c = makeCanvas(w, h);
     const g = ctx2d(c);
     for (const [x, top] of [[1, 5], [3, 1], [5, 4], [7, 2], [8, 7]]) {
-      rect(g, x, top, 1, h - top, x % 2 ? '#6a9a4a' : '#86b35a');
-      if (top < 4) rect(g, x, top, 1, 3, '#8a5a36');
+      rect(g, x, top, 1, h - top, x % 2 ? '#3f9a45' : '#6cc84c');
+      if (top < 4) rect(g, x, top, 1, 3, '#b0663e');
     }
+  } else if (kind === 'fern') {
+    const w = 18, h = 12;
+    c = makeCanvas(w, h);
+    const g = ctx2d(c);
+    const fronds = [[-7, -3], [-4, -8], [0, -10], [4, -8], [7, -3], [-6, 0], [6, 0]];
+    for (const [ex, ey] of fronds) {
+      for (let i = 0; i <= 8; i++) {
+        const t = i / 8;
+        const x = Math.round(9 + ex * t), y = Math.round(11 + ey * t + t * t * 2);
+        px(g, x, y, t > 0.6 ? '#7ccc52' : '#2f8050');
+        if (i % 2 === 0 && i > 1) { px(g, x + (ex > 0 ? -1 : 1), y - 1, '#4fae48'); px(g, x, y - 1, '#4fae48'); }
+      }
+    }
+  } else if (kind === 'glowshroom') {
+    const w = 14, h = 12;
+    c = makeCanvas(w, h);
+    const g = ctx2d(c);
+    for (const [x, y, s] of [[4, 5, 3.2], [9, 7, 2.4], [11, 3, 1.8]]) {
+      rect(g, Math.round(x - 0.5), y, 2, h - y, '#e8f4ff');
+      px(g, Math.round(x + 0.5), y + 2, '#b8c8e8');
+      for (let yy = -Math.ceil(s); yy <= 0; yy++) for (let xx = -Math.ceil(s) - 1; xx <= Math.ceil(s) + 1; xx++) {
+        if ((xx * xx) / ((s + 1) * (s + 1)) + (yy * yy) / (s * s) > 1) continue;
+        px(g, x + xx, y + yy, yy === 0 ? '#3a7ad8' : xx < 0 && yy < -1 ? '#b8fff8' : '#5ad8f0');
+      }
+      px(g, x - 1, y - Math.ceil(s) + 1, '#ffffff');
+    }
+  } else if (kind === 'toadstool') {
+    const w = 16, h = 18;
+    c = makeCanvas(w, h);
+    const g = ctx2d(c);
+    rect(g, 6, 9, 4, 9, '#fff4e0'); rect(g, 9, 10, 1, 8, '#e0c8b0');
+    for (let y = 0; y < 9; y++) {
+      const hw = Math.sin(((y + 1) / 10) * Math.PI * 0.6) * 7.5;
+      for (let x = -Math.round(hw); x <= Math.round(hw); x++) px(g, 8 + x, y + 1, x > hw * 0.5 || y > 7 ? '#b82838' : x < -hw * 0.3 ? '#ff6a6a' : '#ee3a48');
+    }
+    for (const [x, y] of [[5, 3], [10, 2], [8, 6], [12, 5], [3, 6]]) { rect(g, x, y, 2, 2, '#fffdf6'); }
   } else {
     c = makeCanvas(8, 8);
   }
-  return outlineCanvas(c, null, 0.55);
+  return outlineCanvas(c, null, 0.5);
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -1012,5 +1140,50 @@ export function butterflyCanvas(frame, color) {
     else { rect(g, 1, 1, 2, 2, color); rect(g, 4, 1, 2, 2, color); }
     rect(g, 3, 1, 1, 3, '#3a2a30');
     return c;
+  });
+}
+
+export function stoneLanternCanvas() {
+  return cached('stonelantern', () => {
+    const c = makeCanvas(12, 22), g = ctx2d(c);
+    const st = '#c8c0dc', sd = '#9a92b8', sl = '#e8e2f4';
+    rect(g, 3, 19, 6, 3, sd); rect(g, 4, 19, 4, 1, st);
+    rect(g, 5, 12, 2, 7, st); px(g, 6, 13, sd); px(g, 6, 16, sd);
+    rect(g, 2, 10, 8, 2, st); rect(g, 2, 10, 8, 1, sl);
+    rect(g, 3, 5, 6, 5, sd); rect(g, 4, 6, 4, 3, '#ffd870'); px(g, 5, 7, '#fff4c0');
+    rect(g, 1, 3, 10, 2, st); rect(g, 1, 3, 10, 1, sl); rect(g, 3, 1, 6, 2, st); rect(g, 5, 0, 2, 1, sd);
+    px(g, 2, 4, '#6cc04a'); px(g, 3, 4, '#86d64e'); px(g, 8, 20, '#6cc04a');
+    return outlineCanvas(c, null, 0.5);
+  });
+}
+
+// Hushlings: shy forest spirits — pale round heads with hollow eyes and a leaf sprout.
+// frame 0 = looking ahead, 1 = head tilted left, 2 = head tilted right (they rattle between 1 and 2)
+export function hushlingCanvas(frame = 0) {
+  return cached('hushling:' + frame, () => {
+    const c = makeCanvas(12, 16), g = ctx2d(c);
+    const W = '#f4fff4', S = '#cfe8d8', D = '#a8cfc0', H = '#2a3a44';
+    const hx = frame === 1 ? -1 : frame === 2 ? 1 : 0;
+    // body
+    rect(g, 4, 11, 4, 4, W); rect(g, 7, 11, 1, 4, S); rect(g, 4, 15, 1, 1, S); rect(g, 7, 15, 1, 1, S);
+    px(g, 3, 12, W); px(g, 8, 12, S);
+    // head (tilted by frame)
+    const ox = 1 + hx, oy = 3;
+    for (let y = 0; y < 8; y++) for (let x = 0; x < 10; x++) {
+      const dx = (x - 4.5) / 5, dy = (y - 3.8) / 4.2;
+      if (dx * dx + dy * dy > 1) continue;
+      let col = W;
+      if (dx > 0.35 || dy > 0.55) col = S;
+      if (dx > 0.7 && dy > 0.2) col = D;
+      px(g, ox + x, oy + y + (frame && x < 5 === (frame === 1) ? 0 : 0), col);
+    }
+    // hollow eyes and mouth
+    const ey = oy + 3 + (frame === 1 ? 1 : 0);
+    px(g, ox + 3, ey, H); px(g, ox + 3, ey + 1, H);
+    px(g, ox + 6, oy + 3 + (frame === 2 ? 1 : 0), H); px(g, ox + 6, oy + 4 + (frame === 2 ? 1 : 0), H);
+    px(g, ox + 4 + (frame === 2 ? 1 : 0), oy + 6, H);
+    // leaf sprout
+    px(g, ox + 5, oy - 1, '#4fae48'); px(g, ox + 5, oy - 2, '#4fae48'); px(g, ox + 6, oy - 3, '#86d64e'); px(g, ox + 7, oy - 3, '#b4ec62'); px(g, ox + 4, oy - 2, '#86d64e');
+    return outlineCanvas(c, '#5a7a78');
   });
 }

@@ -36,6 +36,7 @@ export function newState(name = 'Wren') {
     stats: { deliveries: 0, guests: 0, fiveStars: 0, sorted: 0, brewed: 0, crafted: 0, earned: 0 },
     flags: {},
     events: {},
+    spirits: {},
     reviews: [],
     today: { earned: 0, reviews: [], deliveries: 0, found: 0 },
     loc: { stage: 'hotel', x: 16, z: 9.5 },

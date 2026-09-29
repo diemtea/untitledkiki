@@ -17,7 +17,9 @@ export function buildTerrainMesh(I, atlas) {
     for (let k = 0; k < 4; k++) {
       pos.push(...p[k]);
       nor.push(...n);
-      col.push(c[k], c[k], c[k]);
+      // hue-shifted ambient occlusion: creases go violet rather than grey
+      const o = 1 - c[k];
+      col.push(1 - o * 1.0, 1 - o * 1.08, 1 - o * 0.55);
     }
     const [u0, v0, u1, v1] = uvr;
     uv.push(u0, v1, u1, v1, u1, v0, u0, v0);

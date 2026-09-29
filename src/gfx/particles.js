@@ -25,14 +25,15 @@ varying float vShape;
 varying vec3 vColor;
 void main() {
   vec2 p = gl_PointCoord - 0.5;
+  float a2 = 1.0;
   if (vShape > 0.5 && vShape < 1.5) { if (abs(p.x) > 0.1) discard; }       // rain streak
-  else if (vShape > 2.5) { if (length(p) > 0.5) discard; }                 // soft round puff (smoke)
+  else if (vShape > 2.5) { float r = length(p); if (r > 0.5) discard; a2 = smoothstep(0.5, 0.05, r); } // soft round puff (smoke, mist)
   else if (vShape > 1.5) {                                                   // glow: plus-shaped pixel sparkle
     float a = step(abs(p.x), 0.17) + step(abs(p.y), 0.17);
     if (a < 0.5 || length(p) > 0.5) discard;
   }
-  if (vAlpha < 0.02) discard;
-  gl_FragColor = vec4(vColor, vAlpha);
+  if (vAlpha * a2 < 0.01) discard;
+  gl_FragColor = vec4(vColor, vAlpha * a2);
 }
 `;
 
