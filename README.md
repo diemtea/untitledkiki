@@ -2,6 +2,8 @@
 
 *A little witch's pet hotel by the sea.*
 
+**[Play it in your browser →](https://diemtea.github.io/untitledkiki/)**
+
 A cozy **HD-2D pixel-art** game for the browser. You play a young witch in her training year who has inherited
 an old inn on the hill above **Maravik**, a sunny seaside town with candy-coloured roofs, a clock tower, a bakery
 and a harbour full of boats. Beyond town, the **Whispering Woods** are an ancient forest of giant mossy trees,
@@ -67,6 +69,8 @@ npm run dev          # http://localhost:5173
 npm run build        # static build in dist/
 npm run build:single # one self-contained HTML file in dist-single/
 ```
+
+Every push to `main` builds the game and deploys it to GitHub Pages (`.github/workflows/pages.yml`).
 
 ## How it's made
 
