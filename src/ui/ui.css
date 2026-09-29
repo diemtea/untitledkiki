@@ -1,5 +1,18 @@
-@import '@fontsource/pixelify-sans/400.css';
-@import '@fontsource/pixelify-sans/600.css';
+/* Latin-only woff2 faces keep the single-file build small (every browser we target reads woff2). */
+@font-face {
+  font-family: 'Pixelify Sans';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 400;
+  src: url(@fontsource/pixelify-sans/files/pixelify-sans-latin-400-normal.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'Pixelify Sans';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 600;
+  src: url(@fontsource/pixelify-sans/files/pixelify-sans-latin-600-normal.woff2) format('woff2');
+}
 
 :root {
   --ink: #2a1d2e;
