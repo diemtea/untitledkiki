@@ -1,5 +1,5 @@
 // DOM user interface: HUD, prompts, toasts, typewriter dialog, modal panels and touch controls.
-import { itemCanvas, iconCanvas, petCanvas, npcCanvas, NPC_LOOKS, witchSheet, sootSheet } from '../gfx/sprites.js';
+import { itemCanvas, iconCanvas, petCanvas, npcCanvas, NPC_LOOKS, witchSheet, milesSheet } from '../gfx/sprites.js';
 import { upscale, makeCanvas, ctx2d } from '../gfx/pixel.js';
 import { ITEMS } from '../game/data.js';
 import { fmtTime } from '../core/util.js';
@@ -24,12 +24,12 @@ export function portraitURL(who) {
   if (urlCache.has(key)) return urlCache.get(key);
   let src;
   if (who === 'witch') src = witchSheet().down[0];
-  else if (who === 'soot') src = sootSheet().sit;
+  else if (who === 'miles') src = milesSheet().sit;
   else if (typeof who === 'string' && who.startsWith('pet:')) src = petCanvas(who.slice(4));
   else if (typeof who === 'string') src = npcCanvas(NPC_LOOKS[who] || NPC_LOOKS.kid);
   else src = npcCanvas(who);
   // crop to head & shoulders
-  const h = Math.min(src.height, who === 'soot' || String(who).startsWith('pet:') ? src.height : 19);
+  const h = Math.min(src.height, who === 'miles' || String(who).startsWith('pet:') ? src.height : 19);
   const c = makeCanvas(src.width, h);
   ctx2d(c).drawImage(src, 0, 0);
   const url = upscale(c, 6).toDataURL();

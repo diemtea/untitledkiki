@@ -154,7 +154,7 @@ function sideFrame(legs, arms = null) {
   return rowsOf(g);
 }
 
-// Flying pose: side view riding the broom with a wicker basket and Soot on the back.
+// Flying pose: side view riding the broom with a wicker basket and Miles on the back.
 function flyFrame(phase) {
   const g = grid(34, 28);
   const hx = 11, hy = 1 + (phase === 1 ? 0 : 0);
@@ -180,19 +180,19 @@ function flyFrame(phase) {
   stamp(g, ['.ss', 'bbB'], hx + 7, 22);
   // basket hanging off the front
   stamp(g, ['..QQQ..', '.Q...Q.', 'qqqqqqq', 'qQqQqQq', 'QqQqQqQ', '.qqqqq.'], 27, 16);
-  // Soot riding on the back of the broom
-  const soot = ['k...k', 'kk.kk', 'kkkkk', 'kgkgk', 'kkkkk', '.kkkkk', 'kkkkkk'];
-  stamp(g, soot, 7, 11);
+  // Miles riding on the back of the broom (nick in his right ear)
+  const miles = ['k...k', '.k.kk', 'kkkkk', 'kgkgk', 'kkkkk', '.kkkkk', 'kkkkkk'];
+  stamp(g, miles, 7, 11);
   return rowsOf(g);
 }
 
 // ---------------------------------------------------------------------------------------------
-// Soot, the black cat companion
+// Miles, the black cat companion. His right ear has a small chomp out of it.
 // ---------------------------------------------------------------------------------------------
 const CAT_PAL = { k: '#231d2c', K: '#3d3552', y: '#f5d24b', n: '#f09aa9', r: C.red, R: C.redD };
-const SOOT_WALK_A = [
-  '..........k...k.',
-  '..........kk.kk.',
+const MILES_WALK_A = [
+  '.........k.....k',
+  '.........kk...kk',
   '.kk......kkkkkkk',
   'k..k.....kykkkyk',
   'k........kkknkkk',
@@ -204,8 +204,8 @@ const SOOT_WALK_A = [
   '...kk.k...kk.k..',
   '...k..k...k..k..',
 ];
-const SOOT_WALK_B = SOOT_WALK_A.slice(0, 10).concat(['....kk....k.kk..', '....k.k..k...k..']);
-const SOOT_SIT = [
+const MILES_WALK_B = MILES_WALK_A.slice(0, 10).concat(['....kk....k.kk..', '....k.k..k...k..']);
+const MILES_SIT = [
   '..k......k..',
   '..kk....kk..',
   '..kkkkkkkk..',
@@ -220,7 +220,7 @@ const SOOT_SIT = [
   '.kkkkkkkkkk.',
   '..kk.kk.kk..',
 ];
-const SOOT_SLEEP = [
+const MILES_SLEEP = [
   '................',
   '.......k...k....',
   '.......kk.kk....',
@@ -932,12 +932,27 @@ export function witchSheet() {
   });
 }
 
-export function sootSheet() {
-  return cached('soot', () => ({
-    walk: [spriteCanvas(SOOT_WALK_A, CAT_PAL), spriteCanvas(SOOT_WALK_B, CAT_PAL)],
-    sit: spriteCanvas(SOOT_SIT, CAT_PAL),
-    sleep: spriteCanvas(SOOT_SLEEP, CAT_PAL),
-  }));
+// Take a bite out of the viewer-left ear by clearing the leftmost pixel of one of its rows: the
+// base row nicks the outer edge under the tip, the tip row crops the point off (the sleeping loaf,
+// where the body would hide a nick). Miles always faces the camera, so that's his right ear.
+function chompEar(rows, row) {
+  const x = rows[row].indexOf('k');
+  return rows.map((r, y) => (y === row ? r.slice(0, x) + '.' + r.slice(x + 1) : r));
+}
+const mirrorRows = (rows) => {
+  const w = rows.reduce((m, r) => Math.max(m, r.length), 0);
+  return rows.map((r) => r.padEnd(w, '.').split('').reverse().join(''));
+};
+
+export function milesSheet() {
+  return cached('miles', () => {
+    // [rows, row to chomp] for walk A/B, sit, sleep
+    const poses = [[MILES_WALK_A, 1], [MILES_WALK_B, 1], [MILES_SIT, 1], [MILES_SLEEP, 1]];
+    const [walkA, walkB, sit, sleep] = poses.map(([rows, ear]) => spriteCanvas(chompEar(rows, ear), CAT_PAL));
+    // Walking left mirrors the body, but the chomp stays on his right ear.
+    const mirrored = poses.map(([rows, ear]) => spriteCanvas(chompEar(mirrorRows(rows), ear), CAT_PAL));
+    return { walk: [walkA, walkB], sit, sleep, mirrored };
+  });
 }
 
 export function petCanvas(species) {

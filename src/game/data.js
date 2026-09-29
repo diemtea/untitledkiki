@@ -174,7 +174,7 @@ export const NPCS = {
   ivy: { name: 'Ivy', role: 'Painter', look: 'painter' },
   mayor: { name: 'Mayor Bellweather', role: 'Mayor', look: 'mayor' },
   lotta: { name: 'Lotta', role: 'Town kid', look: 'kid' },
-  soot: { name: 'Soot', role: 'Your cat', look: null },
+  miles: { name: 'Miles', role: 'Your cat', look: null },
 };
 
 export const SHOPS = {

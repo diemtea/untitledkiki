@@ -1,0 +1,18 @@
+[
+ {"wait": 7000},
+ {"click": "[data-a=new]"},
+ {"click": "[data-a=go]"},
+ {"wait": 2500},
+ {"shot": "m1_intro"},
+ {"key": "KeyE"}, {"wait": 900}, {"key": "KeyE"}, {"wait": 900}, {"key": "KeyE"}, {"wait": 900}, {"key": "KeyE"}, {"wait": 900},
+ {"key": "KeyE"}, {"wait": 900}, {"key": "KeyE"}, {"wait": 600}, {"key": "KeyE"}, {"wait": 600}, {"key": "KeyE"}, {"wait": 600},
+ {"eval": "(() => { const s = __game.stage; s.miles.pos.set(s.witch.pos.x - 1, s.miles.pos.y, s.witch.pos.z + 0.2); s.miles.vel.set(0, 0, 0); __game.debugStep(0.6); return JSON.stringify({ cur: __game.current && __game.current.label, busy: __game.ui.busy }); })()"},
+ {"wait": 1200},
+ {"eval": "(() => { const s = __game.stage, v = s.miles.group.position.clone().project(s.camera); return JSON.stringify({ x: (v.x + 1) / 2 * innerWidth, y: (1 - v.y) / 2 * innerHeight, flip: s.miles.flip, frame: s.miles.bb.frame }); })()"},
+ {"shot": "m2_hotel"},
+ {"eval": "JSON.stringify({ cur: __game.current && __game.current.label })"},
+ {"key": "KeyE"},
+ {"wait": 1500},
+ {"shot": "m3_hint"},
+ {"eval": "document.querySelector('.say, .dialog, #dialog')?.innerText || document.body.innerText.slice(0, 300)"}
+]

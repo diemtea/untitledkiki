@@ -14,7 +14,7 @@ import * as ST from './state.js';
 import { ITEMS, SPECIES, GOALS, NPCS, UPGRADES } from './data.js';
 import { tickGuests, sampleGuests, scoreGuest, makeWish, wishText, isNight } from './guests.js';
 import { morningMail, makeDeliveries, freeRooms } from './jobs.js';
-import { talk, sootHint, TEACH, GIFTS } from './townfolk.js';
+import { talk, milesHint, TEACH, GIFTS } from './townfolk.js';
 import { Title } from '../ui/title.js';
 import { clamp, dist, pick, fmtTime, randInt, chance } from '../core/util.js';
 
@@ -459,7 +459,7 @@ export class Game {
     list.push({ x: 4.5, z: 8.5, r: 1.4, label: 'Workbench', act: () => this.menus.craft() });
     list.push({ x: 1.9, z: 9.4, r: 1.3, label: 'Workshop storage', act: () => this.menus.storage('workshop') });
     list.push({ x: 19.8, z: 4.2, r: 1.3, label: 'Go to sleep', act: () => this.trySleep() });
-    list.push({ x: H.soot.pos.x, z: H.soot.pos.z, r: 0.9, label: 'Pet Soot', act: () => sootHint(this) });
+    list.push({ x: H.miles.pos.x, z: H.miles.pos.z, r: 0.9, label: 'Pet Miles', act: () => milesHint(this) });
     for (let i = 0; i < 6; i++) {
       const rb = roomBounds(i);
       const room = s.rooms[i];
@@ -529,7 +529,7 @@ export class Game {
     if (s.guests.filter((g) => g.status === 'in-room').length >= 4) this.completeGoal('fullHouse');
     if (!s.flags.careHint) {
       s.flags.careHint = true;
-      await this.ui.say({ name: 'Soot', role: 'Your cat', portrait: 'soot', voice: 4 }, `Our first guest! Walk up to ${list[0].name} in their room and press E to feed, pet or play. The bubble over their head shows what they want most.`);
+      await this.ui.say({ name: 'Miles', role: 'Your cat', portrait: 'miles', voice: 4 }, `Our first guest! Walk up to ${list[0].name} in their room and press E to feed, pet or play. The bubble over their head shows what they want most.`);
     }
     this.markDirty();
   }
@@ -1041,7 +1041,7 @@ export class Game {
 
   async celebrate() {
     this.fireworks(40);
-    await this.ui.say({ name: 'Soot', role: 'Your cat', portrait: 'soot', voice: 4 }, 'Six rooms, glowing reviews, and the whole town talking about us. Great-Aunt Hilde would be SO proud. The Broom & Board is officially the Grand Broom & Board!');
+    await this.ui.say({ name: 'Miles', role: 'Your cat', portrait: 'miles', voice: 4 }, 'Six rooms, glowing reviews, and the whole town talking about us. Great-Aunt Hilde would be SO proud. The Broom & Board is officially the Grand Broom & Board!');
     this.ui.toast('The Grand Broom & Board! Thank you for playing — the hotel stays open forever.', 'icon:star', { gold: true, life: 7 });
   }
 
@@ -1063,7 +1063,7 @@ export class Game {
     this.audio.sfx('sleep');
     this.irisClose(() => {
       const notes = [];
-      if (passedOut) notes.push('You dozed off outside at 2am… Soot dragged you home by the cape. (Try to get to bed earlier!)');
+      if (passedOut) notes.push('You dozed off outside at 2am… Miles dragged you home by the cape. (Try to get to bed earlier!)');
       // pets still with you head home or back to rooms
       for (const g of s.guests) {
         if (g.status === 'party' && !g.goingHome) g.status = 'in-room';
@@ -1163,13 +1163,13 @@ export class Game {
     const s = this.state;
     s.flags.introPending = false;
     this.cutscene = true;
-    const soot = { name: 'Soot', role: 'Your cat', portrait: 'soot', voice: 4 };
+    const miles = { name: 'Miles', role: 'Your cat', portrait: 'miles', voice: 4 };
     const me = { name: s.name, role: 'Young witch', portrait: 'witch', voice: 2 };
-    await this.ui.say(soot, 'Mrrow. So this is it. Great-Aunt Hilde’s old inn on the hill… and it’s all yours now.');
+    await this.ui.say(miles, 'Mrrow. So this is it. Great-Aunt Hilde’s old inn on the hill… and it’s all yours now.');
     await this.ui.say(me, 'Broom & Board — a hotel for pets! Every witch needs a trade in her training year, and this one is mine.');
-    await this.ui.say(soot, 'Here’s how it works. Owners write to us. You fly down to Maravik, collect their pets, deliver parcels, and gather whatever you find.');
-    await this.ui.say(soot, 'Then you come home, sort your loot, brew treats and keep our guests happy. Happy guests, good reviews. Good reviews, more guests.');
-    await this.ui.say(soot, this.isTouch ? 'I think I heard the mailbox by the front door. Go on, check it! (Move with the stick, tap Act to interact.)' : 'I think I heard the mailbox by the front door. Go on, check it! (Walk with WASD, press E to interact.)');
+    await this.ui.say(miles, 'Here’s how it works. Owners write to us. You fly down to Maravik, collect their pets, deliver parcels, and gather whatever you find.');
+    await this.ui.say(miles, 'Then you come home, sort your loot, brew treats and keep our guests happy. Happy guests, good reviews. Good reviews, more guests.');
+    await this.ui.say(miles, this.isTouch ? 'I think I heard the mailbox by the front door. Go on, check it! (Move with the stick, tap Act to interact.)' : 'I think I heard the mailbox by the front door. Go on, check it! (Walk with WASD, press E to interact.)');
     this.cutscene = false;
     this.save();
   }

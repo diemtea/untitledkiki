@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { makeFloorTexture, makeWallpaperTexture, makeWainscotTexture, drawTexture } from '../gfx/tiles.js';
 import { makeCanvas, ctx2d, rect, px, disc, outlineCanvas, pixelTexture, shadeHex, tintHex } from '../gfx/pixel.js';
 import { Billboard, blobShadow, groundDecal } from '../gfx/billboard.js';
-import { itemCanvas, iconCanvas, petCanvas, sootSheet, treeCanvas } from '../gfx/sprites.js';
+import { itemCanvas, iconCanvas, petCanvas, milesSheet, treeCanvas } from '../gfx/sprites.js';
 import { Particles } from '../gfx/particles.js';
 import { Witch } from '../entities/witch.js';
 import { Actor } from '../entities/actor.js';
@@ -134,9 +134,9 @@ export class Hotel {
     this.build();
     this.witch = new Witch(this);
     this.witch.addTo(this.scene);
-    const sheet = sootSheet();
-    this.soot = new Actor([sheet.walk[0], sheet.walk[1], sheet.sit, sheet.sleep], { key: 'soot', kind: 'cat', shadowR: 0.3, frameMap: { idle: [2], walk: [0, 1], sleep: [3] } });
-    this.soot.addTo(this.scene);
+    const sheet = milesSheet();
+    this.miles = new Actor([sheet.walk[0], sheet.walk[1], sheet.sit, sheet.sleep], { key: 'miles', kind: 'cat', shadowR: 0.3, frameMap: { idle: [2], walk: [0, 1], sleep: [3] }, mirrorFrames: sheet.mirrored });
+    this.miles.addTo(this.scene);
     this.followers = [];
     this.trail = [];
     this.cam = { target: new THREE.Vector3(15, 0, 6), dist: 17, pitch: 0.74 };
@@ -350,12 +350,12 @@ export class Hotel {
     // curio cabinet
     this.sprite(ART.cabinet(), 11.6, 1.4, { key: 'cabinet' });
     this.block(11, 1, 1, 1);
-    // your bed & Soot's cushion
+    // your bed & Miles's cushion
     const quilt = lam({ map: drawTexture(32, 32, (g) => { rect(g, 0, 0, 32, 32, '#2e3a6b'); for (let y = 0; y < 32; y += 8) for (let x = (y / 8) % 2 ? 4 : 0; x < 32; x += 8) rect(g, x, y, 4, 4, '#46558f'); rect(g, 0, 0, 32, 8, '#fff6e4'); }, { repeat: false }) });
     this.box(19.8, 2.4, 1.6, 2.4, 0.55, [woodMat, woodMat, quilt, woodMat, woodMat, woodMat]);
     const pillow = this.box(19.8, 1.5, 1.2, 0.5, 0.18, lam({ color: '#fffdf6' }), 0.55);
     this.block(19, 1, 2, 3);
-    this.sprite(ART.petbed('#d9393c'), 18.2, 2.2, { key: 'sootbed' });
+    this.sprite(ART.petbed('#d9393c'), 18.2, 2.2, { key: 'milesbed' });
     this.sprite(ART.plant(), 12.2, 9.9, { key: 'plant1' });
     this.block(12, 9, 1, 1);
     this.sprite(ART.plant(), 20.7, 9.9, { key: 'plant2' });
@@ -543,7 +543,7 @@ export class Hotel {
     // followers trail
     const last = this.trail[this.trail.length - 1];
     if (!last || dist(last.x, last.z, w.pos.x, w.pos.z) > 0.15) { this.trail.push({ x: w.pos.x, z: w.pos.z }); if (this.trail.length > 80) this.trail.shift(); }
-    [this.soot, ...this.followers].forEach((a, i) => {
+    [this.miles, ...this.followers].forEach((a, i) => {
       const idx = this.trail.length - 1 - (i + 1) * 5;
       const tp = this.trail[Math.max(0, idx)] || w.pos;
       if (idx >= 0) a.moveToward(tp.x, tp.z, dt, null, 4, 0.05);
@@ -637,7 +637,7 @@ export class Hotel {
     const w = this.witch;
     this.cam.target.set(clamp(w.pos.x, 8, HW - 8), 0.8, clamp(w.pos.z, 3.5, 8));
     this.trail.length = 0;
-    this.soot.pos.set(w.pos.x - 0.7, 0, w.pos.z - 0.3);
+    this.miles.pos.set(w.pos.x - 0.7, 0, w.pos.z - 0.3);
     this.followers.forEach((f, i) => f.pos.set(w.pos.x + 0.7 + i * 0.5, 0, w.pos.z - 0.3));
     this.updateCamera(1);
   }

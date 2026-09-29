@@ -1,13 +1,15 @@
-// Generic sprite actors: townsfolk, pets, Soot, animals. Idle bob, wander, follow, bubbles.
+// Generic sprite actors: townsfolk, pets, Miles, animals. Idle bob, wander, follow, bubbles.
 import * as THREE from 'three';
 import { Billboard, blobShadow } from '../gfx/billboard.js';
 import { bubbleCanvas, iconCanvas, itemCanvas, petCanvas } from '../gfx/sprites.js';
 import { damp, clamp } from '../core/util.js';
 
 export class Actor {
-  // frames: canvases; opts: { key, kind: 'npc'|'pet'|'cat'|'animal', shadowR, hop }
+  // frames: canvases; opts: { key, kind: 'npc'|'pet'|'cat'|'animal', shadowR, hop, mirrorFrames }
+  // mirrorFrames: hand-drawn left-facing versions of frames, used instead of flipping the sprite
   constructor(frames, opts = {}) {
-    this.bb = new Billboard(frames, { key: opts.key });
+    this.bb = new Billboard(opts.mirrorFrames ? frames.concat(opts.mirrorFrames) : frames, { key: opts.key });
+    this.mirrored = !!opts.mirrorFrames;
     this.group = new THREE.Group();
     this.group.add(this.bb.mesh);
     this.shadow = blobShadow(opts.shadowR || 0.36, 0.28);
@@ -91,7 +93,8 @@ export class Actor {
     }
     if (this.hop && this.moving) yoff = Math.abs(Math.sin(this.animDist * 3.2)) * 0.22;
     else if (!this.moving && this.kind !== 'npc') yoff = 0;
-    this.bb.setFrame(frame, this.flip);
+    if (this.mirrored) this.bb.setFrame(frame + (this.flip ? this.frames : 0), false);
+    else this.bb.setFrame(frame, this.flip);
     this.bb.mesh.position.y = yoff;
     // idle breathing: squash the sprite a hair
     const breathe = this.moving ? 1 : 1 + Math.sin(this.t * 2.2) * 0.018;

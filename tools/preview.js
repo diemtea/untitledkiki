@@ -1,4 +1,4 @@
-import { witchSheet, sootSheet, petCanvas, PET_SPECIES, npcCanvas, NPC_LOOKS, itemCanvas, ITEM_ART_IDS, iconCanvas, treeCanvas, randomOwnerLook } from '../src/gfx/sprites.js';
+import { witchSheet, milesSheet, petCanvas, PET_SPECIES, npcCanvas, NPC_LOOKS, itemCanvas, ITEM_ART_IDS, iconCanvas, treeCanvas, randomOwnerLook } from '../src/gfx/sprites.js';
 const S = 4;
 const c = document.getElementById('c');
 c.width = 1400; c.height = 1500;
@@ -21,8 +21,8 @@ w.side.forEach((f, i) => put(f, 'side' + i));
 put(w.cheer, 'cheer');
 br();
 w.fly.forEach((f, i) => put(f, 'fly' + i));
-const s = sootSheet();
-s.walk.forEach((f, i) => put(f, 'soot' + i));
+const s = milesSheet();
+s.walk.forEach((f, i) => put(f, 'miles' + i));
 put(s.sit, 'sit'); put(s.sleep, 'sleep');
 br();
 PET_SPECIES.forEach((p) => put(petCanvas(p), p));

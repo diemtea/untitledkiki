@@ -505,7 +505,7 @@ export class Menus {
         g.audio.sfx('bad');
         place(e, true);
         const lines = { pantry: 'That’s not food, silly!', workshop: 'Hmm, that doesn’t go with the tools.', curios: 'Not exactly a treasure…' };
-        hint.innerHTML = `<b style="color:#dd3b3f">Soot:</b> ${lines[bin]} <span class="muted">(${I.name} goes in the ${BINS[I.bin].name})</span>`;
+        hint.innerHTML = `<b style="color:#dd3b3f">Miles:</b> ${lines[bin]} <span class="muted">(${I.name} goes in the ${BINS[I.bin].name})</span>`;
       }
       if (!top.querySelector('.loot')) finish();
     };
@@ -514,7 +514,7 @@ export class Menus {
         s.stats.sorted += sortedCount;
         g.completeGoal('firstSort');
         const bonus = mistakes === 0 && sortedCount >= 3 ? Math.min(6, 1 + Math.floor(sortedCount / 3)) : 0;
-        hint.innerHTML = `<b style="color:#2e3a6b">All sorted!</b> ${bonus ? `Tidy work — Soot found ${bonus} coins under the table.` : ''}`;
+        hint.innerHTML = `<b style="color:#2e3a6b">All sorted!</b> ${bonus ? `Tidy work — Miles found ${bonus} coins under the table.` : ''}`;
         if (bonus) g.addCoins(bonus, null);
         g.audio.sfx('sparkle');
       }

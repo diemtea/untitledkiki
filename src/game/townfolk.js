@@ -51,7 +51,7 @@ const LINES = {
   },
   lotta: {
     intro: 'Hi! I’m Lotta! Is that your cat? Can he talk? He looks like he can talk.',
-    chat: ['When I grow up I’m going to be a witch too. Or a baker. Or a witch baker!', 'Soot winked at me. I saw it.', 'The fountain has coins in it. Don’t tell anyone I told you.'],
+    chat: ['When I grow up I’m going to be a witch too. Or a baker. Or a witch baker!', 'Miles winked at me. I saw it.', 'The fountain has coins in it. Don’t tell anyone I told you.'],
     voice: 2,
   },
 };
@@ -66,7 +66,7 @@ export const GIFTS = { marlo: 'fish', greta: 'egg', honeycutt: 'bread', ivy: 'fl
 
 export function speaker(id) {
   const n = NPCS[id];
-  return { name: n.name, role: n.role, portrait: id === 'soot' ? 'soot' : n.look, voice: LINES[id]?.voice || 0 };
+  return { name: n.name, role: n.role, portrait: id === 'miles' ? 'miles' : n.look, voice: LINES[id]?.voice || 0 };
 }
 
 export async function talk(game, id) {
@@ -149,10 +149,10 @@ async function lottaTalk(game, sp) {
   await game.ui.say(sp, pick(LINES.lotta.chat));
 }
 
-// Soot, the resident cat, gives hints about what to do next.
-export async function sootHint(game) {
+// Miles, the resident cat, gives hints about what to do next.
+export async function milesHint(game) {
   const s = game.state;
-  const sp = { name: 'Soot', role: 'Your cat', portrait: 'soot', voice: 4 };
+  const sp = { name: 'Miles', role: 'Your cat', portrait: 'miles', voice: 4 };
   game.audio.sfx('meow');
   const unread = s.letters.filter((l) => !l.read).length;
   const booked = s.guests.filter((g) => g.status === 'booked');

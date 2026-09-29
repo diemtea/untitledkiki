@@ -8,7 +8,7 @@ import { createSky, createClouds } from '../gfx/sky.js';
 import { SpriteBatch } from '../gfx/batch.js';
 import { Particles } from '../gfx/particles.js';
 import { Billboard } from '../gfx/billboard.js';
-import { hushlingCanvas, stoneLanternCanvas, butterflyCanvas, treeCanvas, nodeCanvas, npcCanvas, NPC_LOOKS, tuftCanvas, rockCanvas, sheepCanvas, chickenCanvas, gullCanvas, sootSheet, petCanvas, randomOwnerLook, itemCanvas, iconCanvas } from '../gfx/sprites.js';
+import { hushlingCanvas, stoneLanternCanvas, butterflyCanvas, treeCanvas, nodeCanvas, npcCanvas, NPC_LOOKS, tuftCanvas, rockCanvas, sheepCanvas, chickenCanvas, gullCanvas, milesSheet, petCanvas, randomOwnerLook, itemCanvas, iconCanvas } from '../gfx/sprites.js';
 import { buildBuilding, glowMaterials, lampPost, bench, barrel, crate, flowerPotCanvas, stall, fountain, windmill, lighthouse, boat, fence, signpost, launchpad } from './buildings.js';
 import { Witch, CRUISE_Y } from '../entities/witch.js';
 import { Actor } from '../entities/actor.js';
@@ -198,9 +198,9 @@ export class Overworld {
     // --- player & followers
     this.witch = new Witch(this);
     this.witch.addTo(this.scene);
-    const sheet = sootSheet();
-    this.soot = new Actor([sheet.walk[0], sheet.walk[1], sheet.sit, sheet.sleep], { key: 'soot', kind: 'cat', shadowR: 0.3, frameMap: { idle: [2], walk: [0, 1], sleep: [3] } });
-    this.soot.addTo(this.scene);
+    const sheet = milesSheet();
+    this.miles = new Actor([sheet.walk[0], sheet.walk[1], sheet.sit, sheet.sleep], { key: 'miles', kind: 'cat', shadowR: 0.3, frameMap: { idle: [2], walk: [0, 1], sleep: [3] }, mirrorFrames: sheet.mirrored });
+    this.miles.addTo(this.scene);
     this.followers = [];
     this.trail = [];
     this.markers = [];
@@ -454,8 +454,8 @@ export class Overworld {
     }
     const followSpacing = 5;
     const hideFollowers = w.flying;
-    // Soot follows first
-    const chain = [this.soot, ...this.followers];
+    // Miles follows first
+    const chain = [this.miles, ...this.followers];
     chain.forEach((a, i) => {
       a.setVisible(!hideFollowers);
       if (hideFollowers) { a.pos.copy(w.pos); a.pos.y = this.groundY(w.pos.x, w.pos.z); this.trail.length = 0; return; }
@@ -757,7 +757,7 @@ export class Overworld {
     this.cam.dist = w.flying ? 27 : 20;
     this.cam.pitch = w.flying ? 0.86 : 0.6;
     this.trail.length = 0;
-    this.soot.pos.set(w.pos.x - 0.7, w.pos.y, w.pos.z + 0.2);
+    this.miles.pos.set(w.pos.x - 0.7, w.pos.y, w.pos.z + 0.2);
     this.followers.forEach((f, i) => f.pos.set(w.pos.x + 0.7 + i * 0.5, w.pos.y, w.pos.z + 0.3));
     this.updateCamera(1);
   }

@@ -1,4 +1,4 @@
-// The player: a young witch who walks, and flies on her broom with Soot and a basket of guests.
+// The player: a young witch who walks, and flies on her broom with Miles and a basket of guests.
 import * as THREE from 'three';
 import { Billboard, blobShadow } from '../gfx/billboard.js';
 import { witchSheet, petCanvas } from '../gfx/sprites.js';
