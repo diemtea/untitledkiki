@@ -289,3 +289,96 @@ body.talking #touch { visibility: hidden !important; }
   #hud-prompt, #dialog .more, .loot.bundle { animation: none; }
   .toast { animation: toastOut 0.3s ease-in forwards; animation-delay: var(--life, 2.6s); }
 }
+
+/* =========================================================== v2: charms in the HUD */
+#hud-charms { position: absolute; left: 12px; bottom: 72px; display: flex; align-items: center; gap: 5px; padding: 4px 8px; cursor: pointer; }
+#hud-charms .lbl { font-size: 12px; color: var(--plum); letter-spacing: 1px; text-transform: uppercase; margin-right: 2px; }
+#hud-charms .cslot { width: 30px; height: 30px; border-radius: 6px; background: linear-gradient(#fff3d0, #f8d88a); border: 2px solid #c48a2c; display: flex; align-items: center; justify-content: center; box-shadow: inset 0 -2px 0 #e8b860; }
+#hud-charms .cslot img { width: 24px; height: 24px; }
+#hud-charms .cslot.empty { background: transparent; border: 2px dashed #c8b48a; box-shadow: none; }
+body.talking #hud-charms { opacity: 0; }
+
+/* =========================================================== encounter overlay */
+#enc { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; z-index: 30; background: radial-gradient(ellipse at 50% 40%, rgba(46,36,80,0.82), rgba(16,12,30,0.95)); pointer-events: auto; }
+#enc.show { display: flex; animation: encIn 0.35s ease-out; }
+@keyframes encIn { from { opacity: 0; } to { opacity: 1; } }
+.enc-frame { width: min(860px, calc(100vw - 20px)); display: flex; flex-direction: column; gap: 10px; max-height: calc(100vh - 20px); }
+.enc-stage { position: relative; width: 100%; aspect-ratio: 16 / 9; max-height: 58vh; border: 4px solid #fff6e4; border-radius: 8px; overflow: hidden; box-shadow: 0 0 0 4px #2a1d2e, 0 8px 0 rgba(0,0,0,0.4), 0 0 60px rgba(255,212,140,0.18); background: #1b1626; margin: 0 auto; }
+.enc-stage canvas { width: 100%; height: 100%; display: block; image-rendering: pixelated; image-rendering: crisp-edges; touch-action: none; }
+.enc-banner { position: absolute; left: 50%; top: 10px; transform: translate(-50%, -12px); opacity: 0; transition: all 0.4s; background: rgba(30,26,48,0.85); color: #fff6e4; border: 2px solid #fff6e4; border-radius: 6px; padding: 4px 14px; text-align: center; pointer-events: none; }
+.enc-banner.on { opacity: 1; transform: translate(-50%, 0); }
+.enc-banner b { display: block; font-size: 20px; color: #ffe48a; }
+.enc-banner small { font-size: 13px; opacity: 0.85; }
+.enc-hud { position: absolute; left: 8px; top: 8px; display: flex; gap: 6px; pointer-events: none; }
+.enc-chip { background: rgba(30,26,48,0.8); color: #fff6e4; border: 2px solid rgba(255,246,228,0.6); border-radius: 5px; padding: 1px 7px; font-size: 15px; }
+.enc-chip.gold { color: #ffe48a; border-color: #ffe48a; }
+.enc-chip.big { font-size: 34px; padding: 0 14px; }
+.enc-box { min-height: 176px; padding: 10px 14px 8px; position: relative; }
+.enc-who { font-size: 17px; font-weight: 600; color: var(--red); margin-bottom: 2px; }
+.enc-who small { color: var(--plum); font-weight: 400; margin-left: 6px; font-size: 13px; }
+.enc-text { font-size: 19px; line-height: 1.35; min-height: 50px; white-space: pre-line; }
+.enc-opts { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 8px; }
+.enc-opt { display: flex; align-items: center; gap: 8px; text-align: left; padding: 6px 10px; }
+.enc-opt img { width: 28px; height: 28px; flex: none; }
+.enc-opt span { display: flex; flex-direction: column; line-height: 1.15; }
+.enc-opt small { font-size: 12px; color: var(--plum); opacity: 0.85; }
+.enc-opt.sel { outline: 3px solid var(--gold); outline-offset: 1px; background: #fffdf6; }
+.enc-opt.charm { background: linear-gradient(#fff6dc, #fbe2a8); }
+.enc-opt.pet { background: linear-gradient(#eef8ff, #cfe8ff); }
+.enc-hint { position: absolute; right: 12px; top: 10px; font-size: 13px; color: var(--plum); opacity: 0.8; }
+.stars3 { color: #f2c14e; letter-spacing: 1px; text-shadow: 1px 1px 0 #8a5a20; }
+.stars3 i { color: #d8ccb4; font-style: normal; text-shadow: none; }
+@media (max-width: 640px) { .enc-opts { grid-template-columns: 1fr; } .enc-text { font-size: 16px; } .enc-box { min-height: 150px; } .enc-hint { display: none; } }
+
+/* =========================================================== charm packing */
+.charm-pack h4 { margin: 10px 0 6px; color: var(--navy); }
+.charm-slots { display: flex; gap: 8px; flex-wrap: wrap; }
+.charm-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.charm-card { position: relative; border-radius: 8px; padding: 8px; min-height: 92px; background: linear-gradient(#fffaf0, #f6e4bc); border: 3px solid #c48a2c; box-shadow: inset 0 -3px 0 #e8c88a, 0 2px 0 var(--shadow); cursor: pointer; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }
+.charm-card img { width: 34px; height: 34px; }
+.charm-card b { font-size: 15px; color: var(--navy); }
+.charm-card b .n { color: var(--red); }
+.charm-card small { font-size: 12px; line-height: 1.2; color: var(--plum); }
+.charm-card i { font-size: 11px; font-style: normal; color: #a07030; margin-top: auto; text-transform: uppercase; letter-spacing: 0.5px; }
+.charm-card:hover { transform: translateY(-2px); }
+.charm-card.dim { opacity: 0.7; cursor: default; transform: none; }
+.charm-card.slot { width: 170px; background: linear-gradient(#fff3d0, #f8d88a); }
+.charm-card.slot.empty, .charm-card.slot.locked { background: rgba(255,246,228,0.5); border-style: dashed; border-color: #c8b48a; box-shadow: none; align-items: center; justify-content: center; color: #a08a6a; cursor: default; }
+
+/* =========================================================== quirks, trust, letters */
+.need.quirk { background: #f0e4ff; border-color: #b8a0e0; }
+.need.trust { background: #ffe4ec; border-color: #ff9ab8; }
+.trustline { color: #b8204a; margin-top: 4px; }
+.letter.special { background: linear-gradient(#fffdf6, #f8f0ff); border-color: #b8a0e0; font-size: 18px; }
+
+/* =========================================================== season title card */
+.season-card { position: fixed; inset: 0; z-index: 40; display: flex; align-items: center; justify-content: center; background: radial-gradient(ellipse, rgba(30,24,52,0.75), rgba(14,10,26,0.94)); animation: encIn 0.6s ease-out; pointer-events: auto; }
+.season-card.out { opacity: 0; transition: opacity 0.6s; }
+.season-card .sc-inner { text-align: center; color: #fff6e4; max-width: 560px; padding: 20px; }
+.season-card h1 { font-size: clamp(56px, 12vw, 104px); margin: 4px 0; color: var(--sc); text-shadow: 0 5px 0 rgba(0,0,0,0.35), 0 0 40px var(--sc); letter-spacing: 2px; }
+.season-card .sc-small { letter-spacing: 3px; text-transform: uppercase; font-size: 14px; opacity: 0.75; }
+.season-card .sc-sub { font-size: 24px; color: #ffe48a; }
+.season-card p { font-size: 19px; line-height: 1.4; opacity: 0.9; }
+
+/* =========================================================== journal: year & friends */
+.yearbar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 8px; }
+.yearbar .ys { border-radius: 8px; padding: 6px 8px; border: 3px solid var(--sc); background: rgba(255,255,255,0.4); opacity: 0.55; display: flex; flex-direction: column; }
+.yearbar .ys.done { opacity: 0.85; }
+.yearbar .ys.now { opacity: 1; background: #fffdf6; box-shadow: 0 0 0 3px #fffdf6, 0 0 14px var(--sc); }
+.yearbar .ys b { color: var(--navy); }
+.yearbar .ys small { font-size: 12px; color: var(--plum); }
+.yearbar .ys i { font-size: 12px; font-style: normal; color: var(--red); }
+.hearts { color: #ff5a7a; letter-spacing: 1px; }
+.ic.unknown { width: 40px; height: 40px; display: inline-flex; align-items: center; justify-content: center; font-size: 22px; background: #e8d4ae; border-radius: 6px; color: #8a7a5a; }
+
+/* =========================================================== year book */
+.yearbook h3 { color: var(--navy); margin: 12px 0 6px; }
+.yb-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.yb-grid div { background: #fffdf6; border: 2px solid var(--paper3); border-radius: 6px; padding: 6px; text-align: center; display: flex; flex-direction: column; }
+.yb-grid b { font-size: 26px; color: var(--red); }
+.yb-grid span { font-size: 12px; color: var(--plum); }
+.yb-friends { display: flex; flex-wrap: wrap; gap: 6px; }
+.yb-friend { display: flex; flex-direction: column; align-items: center; width: 74px; }
+.yb-friend img { width: 56px; height: 56px; object-fit: contain; }
+.yb-friend small { font-size: 11px; text-align: center; }
+@media (max-width: 640px) { .yb-grid { grid-template-columns: repeat(2, 1fr); } .yearbar { grid-template-columns: repeat(2, 1fr); } }

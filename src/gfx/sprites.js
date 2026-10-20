@@ -610,6 +610,23 @@ const ITEM_ART = {
   bread: ['............', '............', '...oooooo...', '..oyoyoyoo..', '.ooooooooOO.', '.oOoOoOoOOO.', '..OOOOOOOO..'],
   letter: ['............', '.wwwwwwwwww.', '.wWwwwwwwWw.', '.wwWwwwwWww.', '.wwwWwwWwww.', '.wwwwrrwwww.', '.wwwwrrwwww.', '.WWWWWWWWWW.'],
   balloon: ['...rrrr.....', '..rprrrr....', '..rprrrrR...', '..rrrrrrR...', '...rrrrR....', '....rRR.....', '.....n......', '.....n......', '....n.......', '....n.......'],
+  // --- v2: rare tiered finds
+  sunberry: ['....g.....z.', '...gGg...zwz', '....gl....z.', '..oo.oo.....', '.oyOooyO....', '.ooOoooO....', '..OO.OOoo...', '.....oyoO...', '.....ooOO...', '......OO....'],
+  moonberry: ['....m....q..', '...mMm..qwq.', '....mm...q..', '..aa.aa.....', '.awAaawA....', '.aaAaaaA....', '..AA.AAaa...', '.....awaA...', '.....aaAA...', '......AA....'],
+  goldhoney: ['..z.rrrrr...', '.zwzRRRRR...', '..zyyyyyyy..', '..yzzyyyyY..', '..yzyyzyyY..', '..yyyzwzyY..', '..yyyyzyyY..', '..yyyyyyyY..', '...YYYYYY...'],
+  cloudfluff: ['............', '....www.....', '..wwwqww....', '.wwqwwwwww..', 'wwwwwwqwwww.', 'wWwwwwwwwWw.', '.WWwwwwwWW..', '...WWWWW....'],
+  whalesong: ['....bbbb....', '....nnnn....', '...aaaaaa...', '..aaawaaaA..', '..aawwqaaA..', '..aaqwaaaA..', '..aaaaawaA..', '..aaaaaaAA..', '...AAAAAA...'],
+  frostbloom: ['.....a......', '...a.w.a....', '....waw.....', '..awwqwwa...', '....waw.....', '...a.w.a....', '.....g......', '....gg......', '.....g.g....', '.....gG.....'],
+  luckydie: ['............', '..wwwwwww...', '.wewwwwwwW..', '.wwwwwewwW..', '.wwwewwwwW..', '.wwwwwwwwW..', '.wewwwwewW..', '.WWWWWWWWW..'],
+  goosemedal: ['...uu.rr....', '....urr.....', '....Ur......', '...YYYY.....', '..YyzzyY....', '..YzyyyY....', '..YyywyY....', '..YyyyyY....', '...YYYY.....'],
+  sheetmusic: ['.nnnnnnnnn..', '.neeeeeeen..', '.nnnnnnenn..', '.neeeeeeen..', '.nnennnnnn..', '.neeeeeeen..', '.nnnnnnnnn..', '.NNNNNNNNN..'],
+  // --- v2: charms (thank-you cards)
+  charm_kazoo: ['............', '.....yy.....', '....yzzy....', 'rrrrrrrrrr..', 'rpprrrrrrrrr', 'rrrrrrrrrrRR', '.RRRRRRRRR..', '............'],
+  charm_gloves: ['....rr......', '...rprr.....', '.rrrprrr....', 'rprrrrrr....', 'rrrrrrrrR...', '.rrrrrrrR...', '..rrrrrRR...', '..wWwWwW....', '..WWWWWW....'],
+  charm_lavender: ['..v...v.....', '.vqv.vqv....', '..vVv.vV....', '...vV.vV.v..', '....g.g.vqv.', '....g.g.vV..', '.....gg.g...', '.....gGg....', '....hhhh....', '.....HH.....'],
+  charm_monocle: ['...YYYY.....', '..Y.aa.Y....', '.Y.awaa.Y...', '.Y.aaaa.Y...', '.Y.aaaA.Y...', '..Y.AA.Y....', '...YYYYy....', '........y...', '.........y..', '..........y.'],
+  charm_lantern: ['.....B......', '....BBB.....', '...ryyyr....', '..ryzzzyr...', '..ryzwzyr...', '..ryzzzyr...', '...ryyyr....', '....RRR.....', '.....r......'],
+  charm_bun: ['............', '....nnnn....', '..nnyynnnn..', '.nyzzyyynnN.', '.nnyyyyynNN.', '.oooooooooO.', '..OOOOOOOO..'],
 };
 
 // ---------------------------------------------------------------------------------------------
@@ -992,7 +1009,12 @@ export function iconCanvas(id) {
 }
 
 export function treeCanvas(kind, seed) {
-  return cached(`tree:${kind}:${seed}`, () => makeTree(kind, seed));
+  return cached(`tree:${kind}:${seed}`, () => {
+    const c = makeTree(kind, seed);
+    if (kind === 'pine' || kind === 'cypress') c.evergreen = true;
+    if (kind === 'goldtree' || kind === 'spirittree' || kind === 'glowshroom' || kind === 'toadstool') c.noSeason = true;
+    return c;
+  });
 }
 
 // A thought/speech bubble with an icon inside (for pets & NPC markers)

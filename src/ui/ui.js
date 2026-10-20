@@ -2,6 +2,8 @@
 import { itemCanvas, iconCanvas, petCanvas, npcCanvas, NPC_LOOKS, witchSheet, milesSheet } from '../gfx/sprites.js';
 import { upscale, makeCanvas, ctx2d } from '../gfx/pixel.js';
 import { ITEMS } from '../game/data.js';
+import { CHARMS, slotted } from '../game/charms.js';
+import { season, dayOfSeason, isFirstYear } from '../game/year.js';
 import { fmtTime } from '../core/util.js';
 
 const urlCache = new Map();
@@ -78,6 +80,10 @@ export class UI {
     this.bar.id = 'hud-bar';
     this.bar.style.pointerEvents = 'auto';
     this.bar.addEventListener('click', () => this.game.openBag());
+    this.charmsEl = el('div', 'hud panel', '');
+    this.charmsEl.id = 'hud-charms';
+    this.charmsEl.style.pointerEvents = 'auto';
+    this.charmsEl.addEventListener('click', () => { if (this.game.mode === 'play' && !this.dialogOpen) this.game.menus.bag('charms'); });
     this.buttons = el('div', 'hud', '');
     this.buttons.id = 'hud-buttons';
     const mk = (label, key, fn) => {
@@ -97,7 +103,7 @@ export class UI {
     this.compass.id = 'hud-compass';
     this.toasts = el('div', '', '');
     this.toasts.id = 'toasts';
-    this.hud.append(this.clockBox, this.money, this.promptEl, this.bar, this.buttons, this.party, this.compass);
+    this.hud.append(this.clockBox, this.money, this.promptEl, this.bar, this.charmsEl, this.buttons, this.party, this.compass);
     r.appendChild(this.toasts);
   }
   showHUD(v) { this.hud.style.display = v ? 'block' : 'none'; }
@@ -114,7 +120,12 @@ export class UI {
     const hour = s.time / 60;
     const night = hour < 6 || hour >= 20;
     this.set('sun', night, (v) => (this.clockPanel.querySelector('.sunmoon').src = iconURL(v ? 'icon:moon' : 'icon:sun')));
-    this.set('day', `Day ${s.day} · ${['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][s.day % 7]}`, (v) => (this.clockPanel.querySelector('.day').textContent = v));
+    const se = season(s.day);
+    this.set('day', isFirstYear(s.day) ? `${se.name} · day ${dayOfSeason(s.day)}/7` : `Day ${s.day} · ${se.name}`, (v) => { const d = this.clockPanel.querySelector('.day'); d.textContent = v; d.style.color = se.color; });
+    const sl = slotted(s);
+    this.set('charms', sl.join(','), () => {
+      this.charmsEl.innerHTML = `<span class="lbl">Charms</span>` + sl.map((id) => (id ? `<div class="cslot" title="${CHARMS[id].name}: ${CHARMS[id].desc}">${img(CHARMS[id].icon)}</div>` : '<div class="cslot empty"></div>')).join('');
+    });
     this.set('time', fmtTime(s.time), (v) => (this.clockPanel.querySelector('.time').textContent = v));
     const wIcon = s.weather.rain > 0 ? 'icon:rain' : s.weather.cloud > 0.3 ? 'icon:cloud' : night ? 'icon:moon' : 'icon:sun';
     this.set('weather', wIcon, (v) => (this.clockPanel.querySelector('.weather').src = iconURL(v)));

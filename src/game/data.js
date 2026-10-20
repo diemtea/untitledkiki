@@ -64,6 +64,16 @@ export const ITEMS = {
   decor_lamp: { name: 'Star Lamp', cat: 'decor', value: 40, desc: 'Glows softly all night with starlight.' },
   decor_plant: { name: 'Potted Fern', cat: 'decor', value: 16, desc: 'Brings the woods indoors.' },
   decor_rug: { name: 'Woven Rug', cat: 'decor', value: 20, desc: 'Warm under paws.' },
+  // --- v2: rare finds from encounters (loved by every guest)
+  sunberry: { name: 'Sun Berries', cat: 'food', value: 12, rare: true, desc: 'Warm as a summer afternoon. Every pet adores them.' },
+  goldhoney: { name: 'Golden Honey', cat: 'food', value: 20, rare: true, desc: 'From the very top of the hive. The bear says hi.' },
+  moonberry: { name: 'Moonberries', cat: 'food', value: 24, rare: true, desc: 'They glow faintly blue. Only ripen to a spirit\'s song.' },
+  cloudfluff: { name: 'Cloud Fluff', cat: 'material', value: 10, desc: 'A wisp of real cloud. Impossibly soft.' },
+  frostbloom: { name: 'Frostbloom', cat: 'curio', value: 18, desc: 'A flower made of ice that never melts.' },
+  whalesong: { name: 'Jar of Whale Song', cat: 'curio', value: 45, desc: 'Hold it to your ear and the cloud whale is still singing.' },
+  luckydie: { name: 'Rocco\'s Lucky Die', cat: 'curio', value: 25, desc: 'Every side is a six. Of course it is.' },
+  sheetmusic: { name: 'Troll Sheet Music', cat: 'curio', value: 8, desc: 'Mostly doodles of frogs. Some notes, possibly.' },
+  goosemedal: { name: 'The Goose Medal', cat: 'curio', value: 99, desc: 'Awarded by the goose. For what, nobody knows.' },
   // --- special
   parcel: { name: 'Parcel', cat: 'parcel', value: 0, desc: 'Someone is waiting for this!' },
   balloon: { name: 'Red Balloon', cat: 'special', value: 0, desc: 'Lotta’s lost balloon.' },
@@ -163,6 +173,18 @@ export const OWNER_NAMES = [
   'Mr. Farrow', 'Madame Colette', 'Pieter', 'Lucia', 'Ms. Tanaka', 'Mr. Oyelaran',
 ];
 
+// Guest quirks: from summer on, guests start arriving with personalities.
+export const QUIRKS = {
+  picky: { name: 'Picky eater', icon: 'icon:bowl', desc: 'Only favourite foods and treats really fill them up.' },
+  nightowl: { name: 'Night owl', icon: 'icon:moon', desc: 'Sleeps all day. Wants a cuddle after dark.' },
+  stormy: { name: 'Scared of storms', icon: 'icon:rain', desc: 'Gets anxious in the rain, unless their room has a Cozy Cushion.' },
+  messy: { name: 'Messy', icon: 'icon:mess', desc: 'Makes messes twice as often.' },
+  clingy: { name: 'Clingy', icon: 'icon:heart', desc: 'Gets lonely fast, but loves petting even more.' },
+  escape: { name: 'Escape artist', icon: 'icon:exclaim', desc: 'Sometimes sneaks out of their room. Find them and bring them back!' },
+  catfoe: { name: 'Not a cat person', icon: 'icon:sad', desc: 'Grumpy if a cat is staying in the room next door.' },
+  early: { name: 'Early bird', icon: 'icon:sun', desc: 'Their owner needs them picked up by noon.' },
+};
+
 export const NPCS = {
   honeycutt: { name: 'Mrs. Honeycutt', role: 'Baker', look: 'baker' },
   aldo: { name: 'Aldo', role: 'Postmaster', look: 'postmaster' },
@@ -181,7 +203,7 @@ export const SHOPS = {
   pim: { sells: ['carrot', 'fish', 'milk', 'egg', 'seeds', 'apple', 'twine', 'bread'], markup: 1.3, buys: ['food'] },
   marlo: { sells: ['fish'], markup: 0.8, buys: ['shell', 'driftwood'] },
   greta: { sells: ['egg', 'milk', 'carrot', 'apple', 'wool'], markup: 1.1, buys: [] },
-  odette: { sells: ['cloth', 'twine', 'glassbead'], markup: 1.5, buys: ['curio', 'material'] },
+  odette: { sells: ['cloth', 'twine', 'glassbead'], markup: 1.5, buys: ['curio', 'material'], charms: { bun: 18, lavender: 26, gloves: 26, clover: 45 } },
 };
 
 export const GOALS = [
@@ -199,6 +221,13 @@ export const GOALS = [
   { id: 'deliveries10', text: 'Complete 10 deliveries', reward: 40 },
   { id: 'spirits', text: 'Greet all eight hushlings in the Whispering Woods', reward: 40 },
   { id: 'grand', text: 'Open all six rooms and reach 30 reputation', reward: 100 },
+  { id: 'charm1', text: 'Use a charm in an encounter', reward: 10 },
+  { id: 'perfect', text: 'Get a perfect ★★★ result in an encounter', reward: 20 },
+  { id: 'friends5', text: 'Make five friends on your travels', reward: 40 },
+  { id: 'friends10', text: 'Make ten friends on your travels', reward: 80 },
+  { id: 'regular', text: 'Welcome back a returning guest', reward: 20 },
+  { id: 'outing', text: 'Let a trusted guest help you in an encounter', reward: 25 },
+  { id: 'festival', text: 'Celebrate the Lantern Festival', reward: 100 },
 ];
 
 export const BOTTLE_NOTES = [

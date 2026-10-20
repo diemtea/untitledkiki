@@ -555,7 +555,18 @@ export class Hotel {
     for (const a of Object.values(this.guestActors)) {
       const g = a.guest;
       const rb = roomBounds(g.room);
-      const nocturnal = g.species === 'owl';
+      // escape artists slip out into the corridor and the lobby until you guide them back
+      if (g.escaped) {
+        if (!a._esc) { a._esc = true; a.place(g.escaped.x, 0, g.escaped.z); a.target = null; }
+        if (!a.target || a.t > (a.nextT || 0)) { a.nextT = a.t + 0.8 + Math.random() * 2; a.target = { x: g.escaped.x + (Math.random() - 0.5) * 2.4, z: g.escaped.z + (Math.random() - 0.5) * 1.2 }; }
+        if (a.moveToward(a.target.x, a.target.z, dt, this, 2.4, 0.1)) a.target = null;
+        a.sleeping = false;
+        a.update(dt, null);
+        a.setBubble('alert', 'icon:exclaim');
+        continue;
+      }
+      if (a._esc) { a._esc = false; a.place(rb.cx, 0, rb.cz); }
+      const nocturnal = g.species === 'owl' || !!(g.quirks && g.quirks.includes('nightowl'));
       a.sleeping = nocturnal ? !night && hour > 9 && hour < 17 : night;
       if (a.sleeping) {
         a.moveToward(rb.cx + 0.6, 2.4, dt, this, 1.2, 0.1);

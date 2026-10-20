@@ -1,5 +1,6 @@
 // Booking letters, owners, and parcel deliveries.
-import { SPECIES, OWNER_NAMES } from './data.js';
+import { SPECIES, OWNER_NAMES, QUIRKS } from './data.js';
+import { seasonIndex } from './year.js';
 import { makeWish, randomPetName } from './guests.js';
 import { randomOwnerLook } from '../gfx/sprites.js';
 import { pick, shuffle, randInt, dist } from '../core/util.js';
@@ -21,11 +22,21 @@ function busyHomes(state) {
   ]);
 }
 
+// Guests get trickier as the year goes on: spring guests have one simple need, summer brings the
+// first quirks, and by winter most guests have a couple of them.
+export function rollQuirks(state, species) {
+  const si = state.day > 28 ? 3 : seasonIndex(state.day);
+  const n = si === 0 ? 0 : si === 1 ? (Math.random() < 0.5 ? 1 : 0) : si === 2 ? 1 + (Math.random() < 0.3 ? 1 : 0) : 1 + (Math.random() < 0.6 ? 1 : 0);
+  const pool = Object.keys(QUIRKS).filter((q) => !(q === 'catfoe' && species === 'cat') && !(q === 'nightowl' && species === 'owl'));
+  return shuffle(pool).slice(0, n);
+}
+
 export function makeBooking(state, homes, opts = {}) {
   const busy = busyHomes(state);
   const freeHomes = homes.filter((h) => !busy.has(h.id));
   if (!freeHomes.length) return null;
   const home = opts.home ? homes.find((h) => h.id === opts.home) : pick(freeHomes);
+  if (!home) return null;
   const species = opts.species || pick(unlockedSpecies(state));
   const usedNames = new Set(state.guests.filter((g) => g.status !== 'done').map((g) => g.name));
   const usedOwners = new Set(state.guests.filter((g) => g.status !== 'done').map((g) => g.owner.name));
@@ -34,6 +45,7 @@ export function makeBooking(state, homes, opts = {}) {
   const S = SPECIES[species];
   const rate = opts.rate || Math.round(S.rate * (1 + Math.min(state.rep, 40) * 0.012));
   const seed = state.nextId * 7919 + state.day * 31;
+  const quirks = opts.quirks || rollQuirks(state, species);
   return {
     type: 'booking',
     id: state.nextId++,
@@ -42,8 +54,11 @@ export function makeBooking(state, homes, opts = {}) {
     petName: opts.petName || randomPetName(species, usedNames),
     nights,
     rate,
-    pickupBy: 18 * 60,
+    pickupBy: quirks.includes('early') ? 12 * 60 : 18 * 60,
     owner: { name: ownerName, home: home.id, door: home.door, label: home.label, look: opts.look || randomOwnerLook(seed) },
+    quirks,
+    regular: !!opts.regular,
+    trusted: !!opts.trusted,
     text: opts.text || null,
     read: false,
   };
@@ -62,8 +77,25 @@ export function morningMail(state, homes, isFirstDay) {
   const free = freeRooms(state).length;
   let n = Math.min(free, 1 + (state.rep >= 6 ? 1 : 0) + (state.rep >= 16 ? 1 : 0) + (Math.random() < 0.35 ? 1 : 0));
   if (free > 0 && n === 0) n = 1;
+  // returning regulars: the pets you've looked after well come back, and their owners trust you more
+  const regs = Object.values(state.regulars || {}).filter((r) => r.lastDay < state.day - 1);
   for (let i = 0; i < n; i++) {
-    const b = makeBooking(state, homes);
+    let b = null;
+    if (regs.length && Math.random() < 0.45) {
+      const r = regs.splice(Math.floor(Math.random() * regs.length), 1)[0];
+      const busyNow = busyHomes(state);
+      if (!busyNow.has(r.owner.home)) {
+        const trusted = r.trust >= 1;
+        b = makeBooking(state, homes, {
+          species: r.species, petName: r.name, ownerName: r.owner.name, home: r.owner.home, look: r.owner.look, regular: true, trusted,
+          nights: randInt(1, 3),
+          text: trusted
+            ? `Dear Broom & Board! ${r.name} hasn't stopped talking about you since last time. Could you take them again? And this time ${r.name} can go on adventures with you, if you like. They're very brave (mostly). — ${r.owner.name}`
+            : `Hello again! ${r.name} keeps sitting by the door, waiting to go back to the hotel on the hill. Would you have room? — ${r.owner.name}`,
+        });
+      }
+    }
+    if (!b) b = makeBooking(state, homes);
     if (b) letters.push(b);
   }
   // the mayor's VIP request

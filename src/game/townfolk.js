@@ -118,7 +118,7 @@ export async function talk(game, id) {
   if (id === 'aldo') add('Any parcels?', () => game.menus.jobBoard('aldo'));
   if (id === 'honeycutt') add('Bread to deliver?', () => game.menus.jobBoard('honeycutt'));
   if (id === 'pim' || id === 'marlo' || id === 'greta') add('Let’s trade', () => game.menus.shop(id));
-  if (id === 'odette') add('Sell treasures', () => game.menus.shop(id));
+  if (id === 'odette') add('Charms & treasures', () => game.menus.shop(id));
   if (id === 'fen') add('Upgrade my gear', () => game.menus.upgrades());
   add('Chat', async () => {
     flags.chat++;

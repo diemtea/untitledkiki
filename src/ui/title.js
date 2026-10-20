@@ -56,12 +56,12 @@ export class Title {
     const fly = this.game.isTouch ? 'tap <b>Fly</b>' : 'press <kbd>F</kbd>';
     menu.innerHTML = `
       <div style="font-size:16px;line-height:1.45">
-        <b style="color:#dd3b3f">Your year of witch training begins!</b> You've inherited <b>Broom &amp; Board</b>, a hotel for pets on the hill above Maravik.<br><br>
-        ${img('letter', 'px hi')} <b>Morning:</b> read booking letters in the mailbox.<br>
-        ${img('gear_bristles', 'px hi')} <b>Out and about:</b> ${fly} to fly. Pick up pets from their owners, deliver parcels for the post office and bakery, gather berries, shells, wool and treasures, and catch things in the sky.<br>
-        ${img('icon:bag', 'px hi')} <b>Back home:</b> sort your loot at the sorting table, brew treats in the cauldron, craft toys and decor, and care for your guests. Feed them, pet them, grant their wishes and tidy their rooms.<br>
-        ${img('icon:star', 'px hi')} <b>Checkout:</b> fly each pet home on their last day. Happy guests leave tips and great reviews, which bring more bookings and let you renovate new rooms.<br><br>
-        Sleep before 2am. Falling stars sometimes land at night…
+        <b style="color:#dd3b3f">Your year of witch training begins!</b> You've inherited <b>Broom &amp; Board</b>, a hotel for pets on the hill above Maravik. You have one year (four seasons of seven days) until the Lantern Festival.<br><br>
+        ${img('letter', 'px hi')} <b>Morning:</b> read booking letters. Pack a <b>charm</b> or two in your Bag.<br>
+        ${img('gear_bristles', 'px hi')} <b>Out and about:</b> ${fly} to fly. Collect pets, deliver parcels, gather treasures, and meet the island's oddballs: trolls, frog choirs, raccoons with cups, spirits. Every <b>encounter</b> can be solved kindly, or played for ★★★. Charms open new ways through.<br>
+        ${img('icon:bag', 'px hi')} <b>Back home:</b> sort your loot, brew treats, craft toys and care for your guests. From summer on, guests have <b>quirks</b>.<br>
+        ${img('icon:heart', 'px hi')} <b>Checkout:</b> happy guests leave thank-you cards with charms inside, and come back as regulars. Trusted pets can join your adventures (a little risky!).<br><br>
+        You can't lose the year. But the more friends you make, the bigger the festival…
       </div>
       <button class="btn primary" data-a="back">Got it!</button>`;
     menu.querySelector('[data-a=back]').onclick = () => { menu.style.maxWidth = ''; this.show(); };

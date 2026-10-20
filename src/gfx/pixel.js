@@ -224,3 +224,76 @@ export function disc(g, cx, cy, r, col) {
     for (let x = -Math.ceil(r); x <= Math.ceil(r); x++)
       if (x * x + y * y <= r * r + r * 0.8) g.fillRect(Math.round(cx + x), Math.round(cy + y), 1, 1);
 }
+
+// ------------------------------------------------------------------ seasons
+// Shift green foliage/grass toward a season: 0 spring (as painted), 1 summer (sun-warmed),
+// 2 autumn (copper & gold), 3 winter (frosted). mode 'leaf' is bold, 'ground' is gentler.
+function rgb2hsl(r, g, b) {
+  r /= 255; g /= 255; b /= 255;
+  const mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2;
+  if (mx === mn) return [0, 0, l];
+  const d = mx - mn, s = l > 0.5 ? d / (2 - mx - mn) : d / (mx + mn);
+  let h = mx === r ? (g - b) / d + (g < b ? 6 : 0) : mx === g ? (b - r) / d + 2 : (r - g) / d + 4;
+  return [h * 60, s, l];
+}
+function hsl2rgb(h, s, l) {
+  h = ((h % 360) + 360) % 360 / 360;
+  if (!s) return [l * 255, l * 255, l * 255];
+  const q = l < 0.5 ? l * (1 + s) : l + s - l * s, p = 2 * l - q;
+  const f = (t) => { t = (t + 1) % 1; return t < 1 / 6 ? p + (q - p) * 6 * t : t < 1 / 2 ? q : t < 2 / 3 ? p + (q - p) * (2 / 3 - t) * 6 : p; };
+  return [f(h + 1 / 3) * 255, f(h) * 255, f(h - 1 / 3) * 255];
+}
+export function seasonPixel(r, g, b, si, mode = 'leaf') {
+  if (!si) return [r, g, b];
+  const [h, s, l] = rgb2hsl(r, g, b);
+  // how "green" is this pixel (soft edges so shading doesn't break)
+  const top = 182;
+  const hw = Math.min(Math.max(0, (h - 62) / 14), Math.max(0, (top - h) / 14), 1);
+  let w = hw * Math.min(1, Math.max(0, (s - 0.16) / 0.12));
+  // blossoms frost over in winter
+  if (si === 3 && mode === 'leaf' && (h > 290 || h < 15) && s > 0.4 && l > 0.6) {
+    const k = 0.7;
+    return [r + (246 - r) * k, g + (246 - g) * k, b + (255 - b) * k];
+  }
+  if (w <= 0) return [r, g, b];
+  let out;
+  if (si === 1) out = hsl2rgb(h - 12, Math.min(1, s * 1.04), Math.min(1, l * 1.03));
+  else if (si === 2) {
+    if (mode === 'leaf') {
+      const t = Math.min(1, Math.max(0, (h - 70) / 100));
+      const nh = l < 0.32 ? 6 + t * 14 : 14 + t * 32;
+      out = hsl2rgb(nh, Math.max(0.74, s), Math.min(0.74, l * 1.08 + 0.05));
+    } else out = hsl2rgb(h - 50, s * 0.85, l * 1.02);
+  } else {
+    const snow = [244, 248, 255];
+    const k = mode === 'leaf' ? (l > 0.45 ? 0.82 : l > 0.3 ? 0.5 : 0.22) : 0.86;
+    const base = mode === 'leaf' ? hsl2rgb(h + 10, s * 0.6, l * 0.9) : hsl2rgb(215, 0.3, 0.8);
+    out = base.map((v, i) => v + (snow[i] - v) * k * (mode === 'leaf' ? 1 : Math.min(1, 0.7 + l)));
+  }
+  return [r + (out[0] - r) * w, g + (out[1] - g) * w, b + (out[2] - b) * w];
+}
+export function seasonImageData(src, dst, si, mode) {
+  const a = src.data, o = dst.data;
+  for (let i = 0; i < a.length; i += 4) {
+    if (!a[i + 3]) { o[i + 3] = 0; continue; }
+    const [r, g, b] = seasonPixel(a[i], a[i + 1], a[i + 2], si, mode);
+    o[i] = r; o[i + 1] = g; o[i + 2] = b; o[i + 3] = a[i + 3];
+  }
+  return dst;
+}
+const seasonCache = new Map();
+export function seasonCanvas(c, si, mode = 'leaf') {
+  if (!si || c.noSeason) return c;
+  if (c.evergreen && si < 3) return c; // pines keep their needles until the snow comes
+  let m = seasonCache.get(c);
+  if (!m) { m = {}; seasonCache.set(c, m); }
+  const k = si + mode;
+  if (!m[k]) {
+    const o = makeCanvas(c.width, c.height);
+    const g = ctx2d(o);
+    const src = ctx2d(c).getImageData(0, 0, c.width, c.height);
+    g.putImageData(seasonImageData(src, g.createImageData(c.width, c.height), si, mode), 0, 0);
+    m[k] = o;
+  }
+  return m[k];
+}

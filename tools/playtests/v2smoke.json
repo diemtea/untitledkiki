@@ -1,0 +1,15 @@
+[
+ {"wait": 7000},
+ {"click": "[data-a=new]"},
+ {"click": "[data-a=go]"},
+ {"wait": 2500},
+ {"shot": "v2_card"},
+ {"wait": 4500},
+ {"shot": "v2_intro"},
+ {"eval": "(async () => { for (let i = 0; i < 30 && (__game.ui.dialogOpen || document.querySelector('.season-card')); i++) { document.querySelector('.season-card')?.dispatchEvent(new Event('pointerdown')); __game.ui.advance(); __game.ui.advance(); await new Promise(r => setTimeout(r, 120)); } return JSON.stringify({ busy: __game.ui.busy, cut: __game.cutscene, charms: __game.state.charms, slots: __game.state.slots }); })()"},
+ {"wait": 800},
+ {"shot": "v2_hotel"},
+ {"eval": "(() => { __game.menus.bag('charms'); return 'ok'; })()"},
+ {"wait": 600},
+ {"shot": "v2_charms"}
+]

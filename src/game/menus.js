@@ -1,5 +1,8 @@
 // All modal panels: bag, journal, map, shops, crafting, sorting, mail, ledger, care, settings.
-import { ITEMS, BINS, RECIPES, CRAFTS, UPGRADES, RENOVATIONS, SPECIES, NPCS, SHOPS, GOALS, BUNDLE_LOOT } from './data.js';
+import { ITEMS, BINS, RECIPES, CRAFTS, UPGRADES, RENOVATIONS, SPECIES, NPCS, SHOPS, GOALS, BUNDLE_LOOT, QUIRKS } from './data.js';
+import { CHARMS, slotted, equipCharm, unequipCharm, charmCount, addCharm } from './charms.js';
+import { SEASONS, SKILLS, seasonIndex, dayOfSeason, isFirstYear, skillsFor, slotsFor, FINALE_DAY } from './year.js';
+import { ENCOUNTERS, encAvailable } from './encounters.js';
 import { img, iconURL, portraitURL } from '../ui/ui.js';
 import { satchelCap, basketCap, storeCount, storeAdd, storeTake, addToSatchel, canFit, removeFromSatchel, countSatchel, hasSave } from './state.js';
 import { actPet, actFeed, actToy, actDecorate, wishText, guestMood } from './guests.js';
@@ -12,6 +15,7 @@ const h = (tag, cls, html) => { const e = document.createElement(tag); if (cls) 
 const needsHTML = (needs, have) => Object.entries(needs).map(([id, n]) => `<span class="need ${have(id) < n ? 'miss' : ''}">${img(id)}${have(id)}/${n}</span>`).join('');
 const bar = (v) => `<div class="bar ${v < 30 ? 'low' : v < 60 ? 'mid' : ''}"><i style="width:${Math.round(v)}%"></i></div>`;
 const starStr = (n) => '★'.repeat(n) + '☆'.repeat(5 - n);
+const quirkChips = (g) => (g.quirks || []).map((q) => `<span class="need quirk" title="${QUIRKS[q].desc}">${img(QUIRKS[q].icon)}${QUIRKS[q].name}</span>`).join('');
 
 export class Menus {
   constructor(game) {
@@ -29,7 +33,7 @@ export class Menus {
     const info = h('div', 'info');
     body.append(tabs, grid, info);
     const inHotel = g.stage === g.hotel;
-    const TABS = [['satchel', 'Satchel'], ['pantry', 'Pantry'], ['workshop', 'Workshop'], ['curios', 'Curios']];
+    const TABS = [['satchel', 'Satchel'], ['charms', 'Charms'], ['pantry', 'Pantry'], ['workshop', 'Workshop'], ['curios', 'Curios']];
     const render = () => {
       tabs.innerHTML = '';
       for (const [k, label] of TABS) {
@@ -38,6 +42,9 @@ export class Menus {
         tabs.appendChild(b);
       }
       grid.innerHTML = '';
+      grid.style.display = tab === 'charms' ? 'none' : '';
+      body.querySelector('.charm-pack')?.remove();
+      if (tab === 'charms') { info.innerHTML = ''; body.insertBefore(this.charmPack(render), info); return; }
       info.innerHTML = `<span class="muted">${tab === 'satchel' ? `Your satchel holds ${satchelCap(this.s)} stacks. Sort it at the hotel’s sorting table.` : `Stored at the hotel. ${inHotel ? 'Click an item to take it with you.' : 'You can take items out while at the hotel.'}`}</span>`;
       let list;
       if (tab === 'satchel') list = this.s.satchel.map((x, i) => ({ id: x.id, n: x.n, i, x }));
@@ -78,12 +85,12 @@ export class Menus {
   }
 
   // ------------------------------------------------------------------ journal
-  journal(tab = 'guests') {
+  journal(tab = 'year') {
     const body = h('div');
     const tabs = h('div', 'tabs');
     const content = h('div');
     body.append(tabs, content);
-    const TABS = [['guests', 'Guests'], ['jobs', 'Deliveries'], ['goals', 'Goals'], ['recipes', 'Recipes'], ['notes', 'Pet notes']];
+    const TABS = [['year', 'Year'], ['friends', 'Friends'], ['guests', 'Guests'], ['jobs', 'Deliveries'], ['goals', 'Goals'], ['recipes', 'Recipes'], ['notes', 'Pet notes']];
     const render = () => {
       tabs.innerHTML = '';
       for (const [k, label] of TABS) {
@@ -92,6 +99,8 @@ export class Menus {
         tabs.appendChild(b);
       }
       content.innerHTML = '';
+      if (tab === 'year') content.appendChild(this.yearPage());
+      if (tab === 'friends') content.appendChild(this.friendsPage());
       if (tab === 'guests') content.appendChild(this.guestList());
       if (tab === 'jobs') {
         const jobs = this.s.jobs.filter((j) => j.status === 'carrying');
@@ -138,9 +147,75 @@ export class Menus {
         party: g.goingHome ? `With you — take ${g.name} home to ${g.owner.label}.` : 'Out for a walk with you.',
         'in-room': `In room ${g.room + 1}. ${g.checkout <= this.s.day ? '<b style="color:#dd3b3f">Goes home today!</b>' : `Checks out on day ${g.checkout}.`}`,
       }[g.status] || g.status;
-      const wish = g.wish ? `<span class="need">${img(g.wish.kind === 'walk' ? 'icon:paw' : g.wish.id)}${g.wishDone ? '✔ ' : ''}Wishes for ${wishText(g.wish)}</span>` : '';
+      const wish = (g.wish ? `<span class="need">${img(g.wish.kind === 'walk' ? 'icon:paw' : g.wish.id)}${g.wishDone ? '✔ ' : ''}Wishes for ${wishText(g.wish)}</span>` : '') + quirkChips(g) + (g.trusted ? `<span class="need trust">${img('icon:heart')}Trusts you</span>` : '');
       wrap.appendChild(h('div', 'row', `${img('pet:' + g.species, 'px ic')}<div class="grow"><div class="title">${g.name} <span class="desc">the ${SPECIES[g.species].name} · ${g.nights} night${g.nights > 1 ? 's' : ''} · ${g.rate}c/night</span></div><div class="desc">${st}</div><div class="needs">${wish}</div></div>
         <div><div class="meter">${img('icon:bowl')} ${bar(g.hunger)}</div><div class="meter">${img('icon:heart')} ${bar(g.joy)}</div></div>`));
+    }
+    return wrap;
+  }
+
+  // ------------------------------------------------------------------ charms
+  charmPack(rerender) {
+    const g = this.game, s = this.s;
+    const inHotel = g.stage === g.hotel;
+    const wrap = h('div', 'charm-pack');
+    const slots = slotted(s);
+    const n = slotsFor(s);
+    wrap.innerHTML = `<div class="muted" style="margin-bottom:6px">${inHotel ? 'Pack charms for your next trip. Each one is spent when you play it in an encounter. Unused charms stay packed.' : 'You can only repack your charms at the hotel.'} You can carry <b>${n}</b> this season.</div>`;
+    const row = h('div', 'charm-slots');
+    slots.forEach((id, i) => {
+      const c = h('div', 'charm-card slot' + (id ? '' : ' empty'), id ? `${img(CHARMS[id].icon)}<b>${CHARMS[id].name}</b><small>${CHARMS[id].desc}</small>` : '<span>empty slot</span>');
+      if (id && inHotel) { c.title = 'Unpack'; c.onclick = () => { unequipCharm(s, i); g.audio.sfx('click'); rerender(); }; }
+      row.appendChild(c);
+    });
+    for (let i = n; i < 3; i++) row.appendChild(h('div', 'charm-card slot locked', `<span>🔒 ${SEASONS[i === 1 ? 1 : 2].name}</span>`));
+    wrap.appendChild(row);
+    wrap.appendChild(h('h4', '', 'Your charms'));
+    const ids = Object.keys(CHARMS).filter((id) => charmCount(s, id) > 0);
+    const grid = h('div', 'charm-grid');
+    if (!ids.length) grid.innerHTML = '<div class="muted">No charms yet. Happy guests leave thank-you cards with charms inside, and some new friends give them too.</div>';
+    for (const id of ids) {
+      const C = CHARMS[id];
+      const c = h('div', 'charm-card', `${img(C.icon)}<b>${C.name} <span class="n">×${charmCount(s, id)}</span></b><small>${C.desc}</small><i>${{ path: 'opens a new path', helper: 'makes a game gentler', luck: 'bends a result', wish: 'perfect outcome' }[C.kind]}</i>`);
+      if (inHotel) c.onclick = () => { if (equipCharm(s, id)) { g.audio.sfx('pickup'); rerender(); } else { g.ui.toast('Your charm slots are full. Click a packed charm to unpack it.', 'charm_bun'); g.audio.sfx('error'); } };
+      else c.classList.add('dim');
+      grid.appendChild(c);
+    }
+    wrap.appendChild(grid);
+    return wrap;
+  }
+
+  // ------------------------------------------------------------------ the year & friends
+  yearPage() {
+    const s = this.s;
+    const wrap = h('div', 'yearpage');
+    const si = seasonIndex(s.day);
+    const first = isFirstYear(s.day) && !s.year?.finale;
+    const bar = SEASONS.map((S, i) => {
+      const done = first ? i < si : true;
+      const now = first && i === si;
+      return `<div class="ys ${done ? 'done' : ''} ${now ? 'now' : ''}" style="--sc:${S.color}"><b>${S.name}</b><small>${S.sub}</small>${now ? `<i>day ${dayOfSeason(s.day)} of 7</i>` : ''}</div>`;
+    }).join('');
+    const skills = skillsFor(s).map((id) => `<div class="row">${img(SKILLS[id].icon, 'px ic')}<div class="grow"><div class="title">${SKILLS[id].name}</div><div class="desc">${SKILLS[id].desc}</div></div></div>`).join('');
+    const daysLeft = FINALE_DAY - s.day;
+    wrap.innerHTML = `<div class="yearbar">${bar}</div>
+      <p>${first ? (daysLeft > 0 ? `<b>${daysLeft}</b> day${daysLeft > 1 ? 's' : ''} until the Lantern Festival.` : '<b>The Lantern Festival is tonight!</b>') : '<b>Your training year is complete.</b> The seasons keep turning, and the hotel stays open forever.'} You carry up to <b>${slotsFor(s)}</b> charm${slotsFor(s) > 1 ? 's' : ''}.</p>
+      <h4>Witch skills</h4>${skills}`;
+    return wrap;
+  }
+  friendsPage() {
+    const s = this.s;
+    const wrap = h('div');
+    wrap.appendChild(h('p', 'muted', 'Everyone you meet on your travels. Each season brings something new, and every ★★★ result makes you better friends.'));
+    for (const e of ENCOUNTERS) {
+      const rec = s.enc?.[e.id];
+      const known = rec && rec.times;
+      const si = Math.max(seasonIndex(s.day), e.from);
+      const c = known ? e.sprite(si, s) : null;
+      const hearts = known ? '♥'.repeat(rec.friend || 0) + '♡'.repeat(Math.max(0, 4 - e.from - (rec.friend || 0))) : '';
+      const pic = c ? `<img class="px ic" style="width:40px;height:40px;object-fit:contain" src="${c.toDataURL()}">` : `<span class="ic unknown">?</span>`;
+      const where = known || encAvailable(s, e) ? e.where : `appears in ${SEASONS[e.from].name.toLowerCase()}`;
+      wrap.appendChild(h('div', 'row', `${pic}<div class="grow"><div class="title">${known ? e.name : '???'} <span class="desc">${known ? e.role : ''}</span></div><div class="desc">${where}${e.air ? ' (in the sky)' : ''}</div></div><div style="text-align:right"><div class="stars3">${known ? '★'.repeat(rec.best) + `<i>${'★'.repeat(3 - rec.best)}</i>` : ''}</div><div class="hearts">${hearts}</div></div>`));
     }
     return wrap;
   }
@@ -178,7 +253,11 @@ export class Menus {
       im.onload = () => x.drawImage(im, px * S - size / 2, pz * S - size / 2 - 4, size, size);
     };
     for (const m of marks) drawIcon(m.icon, m.x, m.z, m.size || 22);
-    const legend = h('div', 'legend', `<span>${img('icon:pin')} You</span><span>${img('icon:paw')} Pet pickup / return</span><span>${img('parcel')} Delivery</span><span>${img('icon:exclaim')} Shops & townsfolk</span><span>${img('icon:star')} Falling star</span>`);
+    for (const e of ENCOUNTERS) {
+      if (e.air || !e.at || !encAvailable(this.s, e) && !this.s.enc?.[e.id]?.times) continue;
+      drawIcon(encAvailable(this.s, e) ? 'icon:sparkle' : 'icon:heart', e.at.x, e.at.z, 20);
+    }
+    const legend = h('div', 'legend', `<span>${img('icon:pin')} You</span><span>${img('icon:paw')} Pet pickup / return</span><span>${img('parcel')} Delivery</span><span>${img('icon:exclaim')} Shops & townsfolk</span><span>${img('icon:sparkle')} Encounter today</span><span>${img('icon:heart')} Friend (seen today)</span>`);
     body.appendChild(legend);
     const labels = [['Whispering Woods', 22, 13], ['Spirit Tree', 19, 27], ['Meadow & Farm', 75, 20], ['Maravik', 50, 52], ['Lighthouse', 89, 66], ['Cove', 9, 46], ['Broom & Board', 50, 16], ['Ridge', 50, 5]];
     x.font = 'bold 13px "Pixelify Sans", sans-serif';
@@ -210,6 +289,30 @@ export class Menus {
         };
         r.appendChild(b);
         buy.appendChild(r);
+      }
+      // Madame Odette also deals in charms (one of each per day)
+      if (shop.charms) {
+        buy.appendChild(h('h4', '', 'Charms'));
+        this.s.gags ||= {};
+        const bought = (this.s.gags.odette || {})[this.s.day] || [];
+        for (const [id, price] of Object.entries(shop.charms)) {
+          const C = CHARMS[id];
+          const r = h('div', 'row', `${img(C.icon, 'px ic')}<div class="grow"><div class="title">${C.name} charm</div><div class="desc">${C.desc}</div></div>`);
+          const sold = bought.includes(id);
+          const b = h('button', 'btn small', sold ? 'Sold out' : `${img('icon:coin')} ${price}`);
+          b.style.whiteSpace = 'nowrap';
+          b.disabled = sold || this.s.coins < price;
+          b.onclick = () => {
+            this.s.coins -= price;
+            addCharm(this.s, id);
+            this.s.gags.odette = { [this.s.day]: [...bought, id] };
+            g.audio.sfx('sparkle');
+            g.ui.toast(`${C.name} charm added to your pouch.`, C.icon);
+            render();
+          };
+          r.appendChild(b);
+          buy.appendChild(r);
+        }
       }
       const sell = h('div', '', `<h3 style="margin:0 0 6px;color:#2e3a6b">Sell</h3>`);
       const sellable = this.s.satchel.filter((x) => {
@@ -543,7 +646,7 @@ export class Menus {
         if (l.type === 'booking') {
           const sp = SPECIES[l.species];
           const text = l.text || `Dear Broom & Board, could you look after my ${sp.name.toLowerCase()}, ${l.petName}, for ${l.nights} night${l.nights > 1 ? 's' : ''}? I can pay ${l.rate} coins a night. I’ll wait at ${l.owner.label} until ${fmtTime(l.pickupBy)}.`;
-          L.innerHTML = `<img class="px stamp" src="${iconURL('pet:' + l.species)}"><div class="from">From ${l.owner.name} · Booking request</div><div>${text}</div><div class="needs" style="margin-top:4px"><span class="need">${img('pet:' + l.species)} ${l.petName} the ${sp.name}</span><span class="need">${img('icon:coin')} ${l.rate} × ${l.nights}</span></div>`;
+          L.innerHTML = `<img class="px stamp" src="${iconURL('pet:' + l.species)}"><div class="from">From ${l.owner.name} · ${l.regular ? 'A returning guest!' : 'Booking request'}</div><div>${text}</div><div class="needs" style="margin-top:4px"><span class="need">${img('pet:' + l.species)} ${l.petName} the ${sp.name}</span><span class="need">${img('icon:coin')} ${l.rate} × ${l.nights}</span>${l.pickupBy < 18 * 60 ? `<span class="need miss">${img('icon:sun')} pick up by ${fmtTime(l.pickupBy)}</span>` : ''}${quirkChips(l)}${l.trusted ? `<span class="need trust">${img('icon:heart')}Can join adventures</span>` : ''}</div>`;
           const acts = h('div', 'acts');
           const free = freeRooms(this.s);
           const a = h('button', 'btn small primary', free.length ? 'Accept' : 'No free room');
@@ -554,7 +657,8 @@ export class Menus {
           acts.append(a, d);
           L.appendChild(acts);
         } else {
-          L.innerHTML = `<div class="from">From ${l.from}</div><div>${l.text}</div>`;
+          if (l.special) L.classList.add('special');
+          L.innerHTML = `<div class="from">From ${l.from}</div><div style="white-space:pre-line">${l.text}</div>`;
           const acts = h('div', 'acts');
           const d = h('button', 'btn small', 'File away');
           d.onclick = () => { this.s.letters = this.s.letters.filter((x) => x !== l); render(); };
@@ -632,7 +736,8 @@ export class Menus {
         <div class="grow" style="flex:1">
           <div class="title" style="font-size:22px;color:#2e3a6b">${guest.name} <span class="desc">the ${S.name} · Room ${guest.room + 1}</span></div>
           <div class="meter" style="font-size:15px">${img('icon:bowl')} Fed ${bar(guest.hunger)} ${img('icon:heart')} Happy ${bar(guest.joy)}</div>
-          <div class="needs" style="margin-top:4px">${guest.wish ? `<span class="need">${img(guest.wish.kind === 'walk' ? 'icon:paw' : guest.wish.id)}${guest.wishDone ? '✔ Wish granted!' : 'Wishes for ' + wishText(guest.wish)}</span>` : ''}${guest.toy ? `<span class="need">${img(guest.toy)} playing with ${ITEMS[guest.toy].name}</span>` : ''}</div>
+          <div class="needs" style="margin-top:4px">${guest.wish ? `<span class="need">${img(guest.wish.kind === 'walk' ? 'icon:paw' : guest.wish.id)}${guest.wishDone ? '✔ Wish granted!' : 'Wishes for ' + wishText(guest.wish)}</span>` : ''}${guest.toy ? `<span class="need">${img(guest.toy)} playing with ${ITEMS[guest.toy].name}</span>` : ''}${quirkChips(guest)}</div>
+          ${guest.trusted ? `<div class="desc trustline">${img('icon:heart')} ${guest.owner.name} trusts you: ${guest.name} can come along and help in encounters. It's a little risky, but they'll love it.</div>` : guest.regular ? `<div class="desc">A returning guest! Look after them well and their owner will trust you with adventures.</div>` : ''}
           <div class="desc" style="margin-top:4px">${due ? '<b style="color:#dd3b3f">Going home today — take them back to ' + guest.owner.name + '.</b>' : `Staying until day ${guest.checkout}.`}</div>
         </div></div><div class="info" style="min-height:28px">${msg}</div>`;
       const acts = h('div', '', '');
@@ -655,7 +760,7 @@ export class Menus {
         if (r.wish) g.wishGranted(guest);
         this.care(guest);
       }, S.toys), !!guest.toy);
-      if (!due) btn(`${img('icon:paw')} Go for a walk`, () => { g.takeGuest(guest, false); this.ui.closeModal(); }, g.party().length >= 3);
+      if (!due) btn(`${img('icon:paw')} ${guest.trusted ? 'Take along on an adventure' : 'Go for a walk'}`, () => { g.takeGuest(guest, false); this.ui.closeModal(); }, g.party().length >= 3, guest.trusted ? 'navy' : '');
       if (due) btn(`${img('icon:paw')} Take home`, () => { g.takeGuest(guest, true); this.ui.closeModal(); }, g.party().length >= 3, 'primary');
       body.appendChild(acts);
     };

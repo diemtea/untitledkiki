@@ -11,11 +11,16 @@ import { Billboard } from '../gfx/billboard.js';
 import { itemCanvas, iconCanvas, NPC_LOOKS } from '../gfx/sprites.js';
 import { Menus } from './menus.js';
 import * as ST from './state.js';
-import { ITEMS, SPECIES, GOALS, NPCS, UPGRADES } from './data.js';
+import { ITEMS, SPECIES, GOALS, NPCS, UPGRADES, QUIRKS } from './data.js';
 import { tickGuests, sampleGuests, scoreGuest, makeWish, wishText, isNight } from './guests.js';
 import { morningMail, makeDeliveries, freeRooms } from './jobs.js';
 import { talk, milesHint, TEACH, GIFTS } from './townfolk.js';
 import { Title } from '../ui/title.js';
+import { EncounterUI } from '../ui/encounter.js';
+import { seasonIndex, season, dayOfSeason, isFirstYear, FINALE_DAY } from './year.js';
+import { CHARMS, addCharm, slotted, thankYouCharm } from './charms.js';
+import { ENC, encAvailable } from './encounters.js';
+import * as story from './story.js';
 import { clamp, dist, pick, fmtTime, randInt, chance } from '../core/util.js';
 
 const MIN_PER_SEC = 1.4; // game minutes per real second
@@ -50,6 +55,7 @@ export class Game {
     await new Promise((r) => setTimeout(r, 30));
     this.world = new Overworld(this);
     this.hotel = new Hotel(this);
+    this.encounterUI = new EncounterUI(this);
     this.renderer.onResize = () => this.onResize();
     this.onResize();
     this.stage = this.world;
@@ -88,6 +94,9 @@ export class Game {
 
   startNew(name) {
     this.state = ST.newState(name || 'Wren');
+    // Hilde's parting gifts: a couple of charms to start the year with
+    addCharm(this.state, 'bun', 2);
+    addCharm(this.state, 'gloves', 1);
     this.applySettings();
     this.state.letters.push(...morningMail(this.state, this.world.I.homes, true));
     this.rollWeather(true);
@@ -121,6 +130,10 @@ export class Game {
     for (let k = 0; k < this.world.I.nodes.length; k++) this.world.setNodeAvailable(k, this.nodeAvailable(k));
     this.world.I.nodes.forEach((n, k) => (n.available = this.nodeAvailable(k)));
     this.setupEvents();
+    story.planGoose(this.state);
+    story.setupEncounterActors(this);
+    story.setupSnail(this);
+    story.applySeasonVisuals(this);
     const loc = this.state.loc || { stage: 'hotel', ...HOTEL_SPAWN_IN };
     this.world.witch.mode = 'walk';
     this.world.witch.walkBB.mesh.visible = true;
@@ -198,6 +211,7 @@ export class Game {
 
     // ---------------------------------------------------------- input
     const uiTook = this.ui.handleKeys(input);
+    if (this.ui.overlay) this.ui.overlay.update(dt, input);
     const busy = this.ui.busy || this.transitioning || this.cutscene;
     if (!uiTook && !busy) {
       if (input.pressed('bag')) { input.consume('bag'); this.openBag(); }
@@ -225,6 +239,7 @@ export class Game {
     }
     this.updateFloaters(dt);
     this.updateFireworks(dt);
+    story.updateLanterns(this, dt);
 
     // ---------------------------------------------------------- interaction prompt
     this.current = busy ? null : this.findInteractable();
@@ -255,7 +270,10 @@ export class Game {
         this.markDirty();
       }
     }
-    if (s.time >= 26 * 60 && !this.endingDay) this.endDay(true);
+    if (s.time >= 26 * 60 && !this.endingDay) {
+      if (isFirstYear(s.day) && s.day === FINALE_DAY && !s.year?.finale) { s.time = 23 * 60; if (!this.cutscene) story.finale(this); }
+      else this.endDay(true);
+    }
   }
 
   onHour(h) {
@@ -264,6 +282,18 @@ export class Game {
     this.markDirty();
     const hh = h % 24;
     if (hh === 22 && this.stage) this.ui.toast('It’s getting late. Your bed is waiting at the hotel.', 'icon:moon');
+    // escape artists
+    for (const g of s.guests) {
+      if (g.status === 'in-room' && !g.escaped && g.quirks?.includes('escape') && hh >= 8 && hh < 21 && Math.random() < 0.12) {
+        g.escaped = pick([{ x: 26, z: 9.2 }, { x: 34, z: 9.4 }, { x: 41, z: 9.2 }, { x: 12, z: 8.2 }, { x: 18, z: 7.4 }, { x: 6.5, z: 6.6 }]);
+        this.ui.toast(`${g.name} has escaped from room ${g.room + 1}! Find them in the hotel.`, 'pet:' + g.species, { life: 4.5 });
+        this.markDirty();
+      }
+    }
+    if (hh === 18 && isFirstYear(s.day) && s.day === FINALE_DAY && !s.year?.finale) {
+      this.ui.toast('The Lantern Festival is starting in the plaza!', 'decor_lamp', { gold: true, life: 6 });
+      this.audio.sfx('bell');
+    }
     if (hh === 8) for (const g of s.guests) if (g.status === 'in-room' && g.checkout <= s.day) this.ui.toast(`${g.name} goes home today!`, 'pet:' + g.species);
     // falling stars on clear nights
     if ((hh >= 20 || hh <= 1) && s.weather.rain === 0 && !this.endingDay) {
@@ -327,7 +357,7 @@ export class Game {
           arriving.push(g);
           g.checkedIn = true;
           g.checkout = s.day + g.nights;
-          g.wish = makeWish(g.species);
+          g.wish = makeWish(g.species, Math.random, isFirstYear(s.day) ? seasonIndex(s.day) : 3);
         }
       }
       this.stage = this.hotel;
@@ -436,6 +466,9 @@ export class Game {
     });
     for (const a of w.spirits || []) list.push({ x: a.pos.x, z: a.pos.z, r: 1.4, label: s.spirits && s.spirits[a.spiritIndex] ? 'Wave to the hushling' : 'Greet the forest spirit', act: () => this.greetSpirit(a) });
     for (const st of this.stars) if (!st.taken && st.landed) list.push({ x: st.x, z: st.z, r: 1.6, label: 'Pick up the Star Shard', act: () => this.takeStar(st) });
+    story.encounterInteractables(this, list);
+    story.snailInteractable(this, list);
+    story.festivalInteractable(this, list);
     const chest = this.chest;
     if (chest && !s.flags.chestOpened) list.push({ x: chest.x, z: chest.z, r: 1.5, label: 'Old sea chest', act: () => this.openChest() });
     return list;
@@ -470,7 +503,10 @@ export class Game {
       list.push({ x: rb.x1 - 0.7, z: 5.6, r: 0.9, label: `Decorate room ${i + 1}`, act: () => this.menus.decorate(i) });
       (room.messes || []).forEach((m, k) => list.push({ x: m.x, z: m.z, r: 0.8, label: 'Tidy up the mess', act: () => this.cleanMess(i, k) }));
     }
-    for (const a of Object.values(H.guestActors)) list.push({ x: a.pos.x, z: a.pos.z, r: 1.0, label: `Care for ${a.guest.name}`, act: () => this.menus.care(a.guest) });
+    for (const a of Object.values(H.guestActors)) {
+      if (a.guest.escaped) list.push({ x: a.pos.x, z: a.pos.z, r: 1.1, label: `Guide ${a.guest.name} back to their room`, act: () => this.returnEscapee(a.guest) });
+      else list.push({ x: a.pos.x, z: a.pos.z, r: 1.0, label: `Care for ${a.guest.name}`, act: () => this.menus.care(a.guest) });
+    }
     return list;
   }
 
@@ -525,6 +561,8 @@ export class Game {
       this.completeGoal('firstGuest');
       this.audio.petVoice(g.species);
       this.ui.toast(`${g.name} checked into room ${g.room + 1}! They wish for ${wishText(g.wish)}.`, 'pet:' + g.species, { life: 5 });
+      if (g.quirks?.length) this.ui.toast(`${g.name}: ${g.quirks.map((q) => QUIRKS[q].name).join(' · ')}`, QUIRKS[g.quirks[0]].icon, { life: 5 });
+      if (g.regular) this.completeGoal('regular');
     }
     if (s.guests.filter((g) => g.status === 'in-room').length >= 4) this.completeGoal('fullHouse');
     if (!s.flags.careHint) {
@@ -561,8 +599,22 @@ export class Game {
     if (res.stars === 5) { s.stats.fiveStars++; this.completeGoal('fiveStar'); }
     if (g.vip) s.flags.vipDone = true;
     this.checkRepGoals();
+    // regulars remember how they were treated
+    s.regulars ||= {};
+    const rk = g.owner.name + '|' + g.name;
+    const prev = s.regulars[rk];
+    s.regulars[rk] = { name: g.name, species: g.species, owner: { ...g.owner }, stays: (prev?.stays || 0) + 1, trust: (prev?.trust || 0) + (res.stars >= 4 ? 1 : 0), lastDay: s.day };
+    // a thank-you card with a charm inside
+    let charm = null;
+    if (res.stars >= 4 && !late) { charm = thankYouCharm(g.species, res.stars); addCharm(s, charm); }
     if (late) return;
     await this.ui.say(sp, `${g.name}! My darling! ${res.text}`);
+    if (charm) {
+      this.audio.sfx('sparkle');
+      await this.ui.say(sp, `Oh, and this is for you. A little thank-you card. ${pick(['There’s something tucked inside!', 'We made it together, didn’t we, sweetie?', 'It’s a lucky one, I think.'])}`);
+      this.ui.toast(`Thank-you card: ${CHARMS[charm].name} charm! ${CHARMS[charm].desc}`, CHARMS[charm].icon, { gold: true, life: 5 });
+      if (s.regulars[rk].trust === 1 && res.stars >= 4) this.ui.toast(`${g.owner.name} trusts you now. Next time ${g.name} visits, they can help you on adventures!`, 'icon:heart', { life: 5 });
+    }
     this.audio.sfx('deliver');
     this.ui.toast(`+${res.pay} coins${res.tip ? ` and a ${res.tip} coin tip` : ''}!`, 'icon:coin', { gold: true });
     this.ui.toast(`${'★'.repeat(res.stars)} review · +${repGain} reputation`, 'icon:star', { gold: true });
@@ -808,6 +860,7 @@ export class Game {
     if (this.bubbleT <= 0) {
       this.bubbleT = 0.5;
       for (const [id, a] of Object.entries(w.npcs)) a.setBubble(...this.npcBubble(id));
+      story.encounterBubbles(this);
       for (const a of Object.values(w.owners)) {
         const g = a.guest;
         if (!g) continue;
@@ -824,9 +877,15 @@ export class Game {
     }
     // glowing things borrow lights from the world's light pool
     this.world.glowSpots = this.stars.filter((st) => !st.taken && st.landed).map((st) => ({ pos: new THREE.Vector3(st.x, st.y + 0.8, st.z), color: '#ffe890', power: 4 + Math.sin(this.t * 4) }));
+    // sky encounters, the goose, encounter bubbles
+    story.updateSkyEncounters(this, dt);
+    story.updateGoose(this, dt);
+    for (const e of this.encActors || []) { e.actor.update(dt, null); e.extra?.update(dt, null); }
+    this.snail?.update(dt, null);
     // markers
     this.world.setMarkers(this.mapMarkers().filter((m) => m.world));
   }
+  queueLetter(who, si) { story.queueLetter(this, who, si); }
 
   npcBubble(id) {
     const s = this.state;
@@ -854,6 +913,7 @@ export class Game {
     for (const j of s.jobs) if (j.status === 'carrying') list.push({ icon: 'parcel', x: j.to.door.x, z: j.to.door.z, world: true });
     for (const st of this.stars || []) if (!st.taken) list.push({ icon: 'icon:star', x: st.x, z: st.z, world: st.landed });
     if (this.balloonMesh) list.push({ icon: 'balloon', x: this.balloonMesh.position.x, z: this.balloonMesh.position.z, world: false });
+    if (this.skyEvent) list.push({ icon: this.skyEvent.def.id === 'whale' ? 'cloudfluff' : 'icon:rain', x: this.skyEvent.mesh.position.x, z: this.skyEvent.mesh.position.z, y: this.skyEvent.mesh.position.y + 2.2, world: true });
     const ev = s.events.balloon;
     if (ev && ev.caught && !ev.done) list.push({ icon: 'icon:exclaim', x: w.npcs.lotta.pos.x, z: w.npcs.lotta.pos.z, world: true });
     for (const id of ['aldo', 'honeycutt', 'pim', 'odette', 'fen', 'marlo', 'greta', 'ivy']) {
@@ -883,6 +943,16 @@ export class Game {
   }
 
   // ================================================================== hotel actions
+  returnEscapee(g) {
+    g.escaped = null;
+    g.joy = clamp(g.joy + 6, 0, 100);
+    this.audio.petVoice(g.species);
+    this.ui.toast(`${g.name} trots back to room ${g.room + 1}, looking very pleased with their adventure.`, 'pet:' + g.species);
+    this.markDirty();
+  }
+  // debug / playtest helper: jump straight into an encounter
+  debugEncounter(id) { return story.startEncounter(this, ENC[id]); }
+
   cleanMess(roomIdx, k) {
     const room = this.state.rooms[roomIdx];
     const m = room.messes[k];
@@ -954,6 +1024,7 @@ export class Game {
     const g = {
       id: s.nextId++, name: l.petName, species: l.species, owner: l.owner, nights: l.nights, rate: l.rate,
       status: 'booked', room: free[0], hunger: 80, joy: 70, pickupBy: l.pickupBy, vip: !!l.vip, day: s.day,
+      quirks: l.quirks || [], regular: !!l.regular, trusted: !!l.trusted, trust: s.regulars?.[l.owner.name + '|' + l.petName]?.trust || 0,
     };
     s.guests.push(g);
     s.letters = s.letters.filter((x) => x !== l);
@@ -1047,6 +1118,12 @@ export class Game {
 
   // ================================================================== day cycle
   async trySleep() {
+    const s0 = this.state;
+    if (isFirstYear(s0.day) && s0.day === FINALE_DAY && !s0.year?.finale) {
+      await this.ui.say({ name: 'Miles', role: 'Your cat', portrait: 'miles', voice: 4 }, s0.time >= 18 * 60 ? 'You are NOT sleeping through the Lantern Festival. Come on. Plaza. Now. I\'ll carry you if I have to.' : 'Bed? Already? The Lantern Festival is tonight! It starts at six, in the plaza.');
+      if (s0.time >= 18 * 60) { this.exitHotel(); setTimeout(() => story.finale(this), 900); }
+      return;
+    }
     const h = this.hour;
     if (h >= 6 && h < 18) {
       const k = await this.ui.say({ name: this.state.name, role: 'You', portrait: 'witch' }, 'It’s still daytime… take a nap until tomorrow morning?', ['Sleep until morning', 'Not yet']);
@@ -1113,14 +1190,16 @@ export class Game {
       this.hotel.snapCamera();
       this.save();
       this.renderer.post.iris.value = 0;
-      this.menus.summary(report, () => {
+      this.menus.summary(report, async () => {
         if (!this.endingDay) return;
         this.endingDay = false;
-        this.cutscene = false;
         this.irisOpen();
         this.audio.sfx('bell');
-        const wx = s.weather.rain ? 'It’s raining — frogs will be delighted.' : s.weather.cloud > 0.3 ? 'A cloudy morning.' : 'A bright, breezy morning!';
-        this.ui.toast(`Day ${s.day}. ${wx}`, s.weather.rain ? 'icon:rain' : s.weather.cloud > 0.3 ? 'icon:cloud' : 'icon:sun', { life: 4 });
+        try { await story.morning(this); } catch (e) { console.error(e); }
+        this.cutscene = false;
+        const se = season(s.day);
+        const wx = s.weather.snow ? 'It’s snowing!' : s.weather.rain ? 'It’s raining — frogs will be delighted.' : s.weather.cloud > 0.3 ? 'A cloudy morning.' : 'A bright, breezy morning!';
+        this.ui.toast(`${isFirstYear(s.day) ? `${se.name}, day ${dayOfSeason(s.day)} of 7` : `Day ${s.day}`}. ${wx}`, s.weather.snow ? 'frostbloom' : s.weather.rain ? 'icon:rain' : s.weather.cloud > 0.3 ? 'icon:cloud' : 'icon:sun', { life: 4 });
         if (s.letters.some((l) => !l.read)) this.ui.toast('You have mail!', 'letter');
       });
     }, null, true);
@@ -1129,8 +1208,17 @@ export class Game {
   rollWeather(first) {
     const s = this.state;
     const r = Math.random();
-    if (first || r < 0.55) s.weather = { kind: 'sunny', cloud: 0, rain: 0, wind: 0.2 };
-    else if (r < 0.78) s.weather = { kind: 'cloudy', cloud: 0.6, rain: 0, wind: 0.5 };
+    const si = seasonIndex(s.day);
+    if (si === 3 && !first) {
+      // winter: crisp, grey or snowy (no rain)
+      if (r < 0.4) s.weather = { kind: 'sunny', cloud: 0.1, rain: 0, wind: 0.3 };
+      else if (r < 0.65) s.weather = { kind: 'cloudy', cloud: 0.7, rain: 0, wind: 0.5 };
+      else s.weather = { kind: 'snow', cloud: 0.8, rain: 0, snow: 1, wind: 0.4 };
+      return;
+    }
+    const wet = si === 2 ? 0.08 : 0; // a rainier autumn
+    if (first || r < 0.55 - wet) s.weather = { kind: 'sunny', cloud: 0, rain: 0, wind: 0.2 };
+    else if (r < 0.78 - wet) s.weather = { kind: 'cloudy', cloud: 0.6, rain: 0, wind: si === 2 ? 0.8 : 0.5 };
     else if (r < 0.94) s.weather = { kind: 'rain', cloud: 1, rain: 1, wind: 0.6 };
     else s.weather = { kind: 'windy', cloud: 0.2, rain: 0, wind: 1.2 };
   }
@@ -1149,6 +1237,13 @@ export class Game {
       else if (g.status === 'in-room' && g.hunger < 30) t.push({ text: `${g.name} is hungry`, icon: 'icon:bowl' });
     }
     for (const j of s.jobs) if (j.status === 'carrying') t.push({ text: `Deliver to ${j.to.label}`, icon: 'parcel' });
+    for (const g of s.guests) if (g.escaped) t.push({ text: `${g.name} has escaped! Find them in the hotel`, icon: 'icon:exclaim' });
+    if (story.festivalOpen(s)) t.unshift({ text: 'Join the Lantern Festival in the plaza!', icon: 'decor_lamp' });
+    else if (isFirstYear(s.day) && s.day === FINALE_DAY && !s.year?.finale) t.unshift({ text: 'The Lantern Festival starts at 6pm in the plaza', icon: 'decor_lamp' });
+    // someone new to meet this season?
+    const fresh = Object.values(ENC).find((e) => !e.air && encAvailable(s, e) && !(s.enc?.[e.id]?.times));
+    if (fresh && t.length < 5) t.push({ text: `Someone needs you at ${fresh.where}`, icon: 'icon:exclaim' });
+    if (!slotted(s).some(Boolean) && Object.keys(s.charms || {}).length && this.stage === this.hotel) t.push({ text: 'Pack a charm before heading out (Bag › Charms)', icon: 'charm_bun' });
     const ev = s.events.balloon;
     if (ev && !ev.done && s.npc.lotta?.met) t.push({ text: ev.caught ? 'Return the balloon to Lotta' : 'Find Lotta’s red balloon in the sky', icon: 'balloon' });
     const loot = s.satchel.filter((x) => x.id !== 'parcel' && x.id !== 'balloon').length;
@@ -1165,10 +1260,14 @@ export class Game {
     this.cutscene = true;
     const miles = { name: 'Miles', role: 'Your cat', portrait: 'miles', voice: 4 };
     const me = { name: s.name, role: 'Young witch', portrait: 'witch', voice: 2 };
+    await story.seasonCard(this, 0);
+    s.gags ||= {}; s.gags.intro0 = true;
     await this.ui.say(miles, 'Mrrow. So this is it. Great-Aunt Hilde’s old inn on the hill… and it’s all yours now.');
     await this.ui.say(me, 'Broom & Board — a hotel for pets! Every witch needs a trade in her training year, and this one is mine.');
     await this.ui.say(miles, 'Here’s how it works. Owners write to us. You fly down to Maravik, collect their pets, deliver parcels, and gather whatever you find.');
     await this.ui.say(miles, 'Then you come home, sort your loot, brew treats and keep our guests happy. Happy guests, good reviews. Good reviews, more guests.');
+    await this.ui.say(miles, 'You\'ve got one year. Four seasons. Then it\'s the Lantern Festival, and everyone will see what kind of witch you turned out to be. No pressure.');
+    await this.ui.say(miles, 'Oh, and Hilde left you these: charms. Old thank-you cards from her guests. Pack one in your Bag before you head out. Out there you\'ll meet… all sorts. A charm can open up a whole new way to help.');
     await this.ui.say(miles, this.isTouch ? 'I think I heard the mailbox by the front door. Go on, check it! (Move with the stick, tap Act to interact.)' : 'I think I heard the mailbox by the front door. Go on, check it! (Walk with WASD, press E to interact.)');
     this.cutscene = false;
     this.save();

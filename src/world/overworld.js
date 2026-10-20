@@ -2,6 +2,7 @@
 import * as THREE from 'three';
 import { buildIsland, levelY, WATER_Y, T, W, H } from './island.js';
 import { buildTerrainMesh, buildShoreTexture } from './terrain.js';
+import { seasonCanvas, seasonImageData, ctx2d } from '../gfx/pixel.js';
 import { buildTerrainAtlas } from '../gfx/tiles.js';
 import { createWater } from '../gfx/water.js';
 import { createSky, createClouds } from '../gfx/sky.js';
@@ -539,6 +540,21 @@ export class Overworld {
     this.updateLampPool(S);
   }
 
+  // Seasons repaint the foliage and the ground: copper leaves in autumn, snow in winter.
+  applySeason(si) {
+    if (this.season === si) return;
+    this.season = si;
+    const tex = this.batch.atlasTex;
+    const c = tex.image, g = ctx2d(c);
+    for (const [cv, r] of this.batch.canvases) { if (!r) continue; g.clearRect(r.x, r.y, r.w, r.h); g.drawImage(seasonCanvas(cv, si), r.x, r.y); }
+    tex.needsUpdate = true;
+    const tc = this.atlas.canvas, tg = ctx2d(tc);
+    this.atlasOrig ||= tg.getImageData(0, 0, tc.width, tc.height);
+    if (!si) tg.putImageData(this.atlasOrig, 0, 0);
+    else tg.putImageData(seasonImageData(this.atlasOrig, tg.createImageData(tc.width, tc.height), si, 'ground'), 0, 0);
+    this.atlas.tex.needsUpdate = true;
+  }
+
   updateMagic(dt, t, S) {
     const r = this.game.renderer;
     const scale = r.height * r.pixelRatio / (2 * Math.tan((this.camera.fov * Math.PI) / 360));
@@ -598,6 +614,19 @@ export class Overworld {
       const x = c.x + (R() - 0.5) * 26, z = c.z + (R() - 0.5) * 18;
       const i = this.I.idx(clamp(x | 0, 0, W - 1), clamp(z | 0, 0, H - 1));
       if (this.I.land[i]) this.fx.spawn({ x, y: this.groundY(x, z) + 0.3 + R() * 0.5, z, vx: 0.25, vy: 0.02, life: 8, size: 2.2 + R() * 1.4, color: S.isNight ? '#b8c8ff' : '#f0fff8', alpha: 0.13, wobble: 0.2, fadeIn: 0.35, shape: 3 });
+    }
+    // snow in winter: always a few flakes, a proper flurry on snowy days
+    if (this.season === 3) {
+      const n = Math.floor(dt * (weather.snow ? 160 : 26) + R());
+      for (let k = 0; k < n; k++) {
+        const x = c.x + (R() - 0.5) * 34, z = c.z + (R() - 0.5) * 26;
+        this.fx.spawn({ x, y: c.y + 0.5 + R() * 6, z, vx: 0.5 + (weather.wind || 0), vy: -1.1 - R() * 0.8, life: 6, size: 0.06 + R() * 0.04, color: '#ffffff', alpha: 0.9, wobble: 0.8, fadeIn: 0.15 });
+      }
+    }
+    // autumn: falling leaves near the woods and the orchard
+    if (this.season === 2 && R() < dt * 10) {
+      const x = c.x + (R() - 0.5) * 26, z = c.z + (R() - 0.5) * 18;
+      this.fx.spawn({ x, y: this.groundY(x, z) + 3 + R() * 2, z, vx: 0.6, vy: -0.6, life: 5, size: 0.1, color: R() < 0.5 ? '#ff9a3a' : R() < 0.5 ? '#e8503a' : '#f8c860', alpha: 1, wobble: 1.3, fadeIn: 0.2 });
     }
     // rain
     if (weather.rain > 0) {
@@ -676,6 +705,7 @@ export class Overworld {
     if (this.lanternMat) this.lanternMat.emissiveIntensity = S.lampOn ? 2.4 : 0.15;
     const post = this.game.renderer.post;
     post.tint.value.copy(S.tint);
+    if (this.seasonTint) post.tint.value.multiply(this.seasonTint);
     post.lift.value.copy(S.lift);
     post.saturation.value = S.saturation;
     post.shadowTint.value.copy(S.shadowTint);

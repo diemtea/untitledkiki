@@ -8,8 +8,12 @@ export const MAX_MESS = 3;
 
 export function isNight(min) { const h = (min / 60) % 24; return h >= 22 || h < 6; }
 
-export function makeWish(sp, rng = Math.random) {
+// Later in the year, some guests wish for rare finds that only encounters give.
+const RARE_WISHES = [[], ['sunberry', 'goldhoney'], ['sunberry', 'goldhoney', 'moonberry'], ['goldhoney', 'moonberry', 'moonberry']];
+export function makeWish(sp, rng = Math.random, si = 0) {
   const S = SPECIES[sp];
+  const rare = RARE_WISHES[si] || [];
+  if (rare.length && rng() < [0, 0.2, 0.32, 0.42][si]) return { kind: 'food', id: rare[Math.floor(rng() * rare.length)], rare: true };
   const opts = [];
   for (const f of S.foods) opts.push({ kind: 'food', id: f });
   for (const t of S.treats) opts.push({ kind: 'treat', id: t }, { kind: 'treat', id: t });
@@ -27,12 +31,16 @@ export function wishText(w) {
   return (/^[aeiou]/i.test(it.name) ? 'an ' : 'a ') + it.name;
 }
 
+export const hasQuirk = (g, q) => !!(g.quirks && g.quirks.includes(q));
+
 export function tickGuests(state, dMin, weather) {
   const night = isNight(state.time);
+  const hour = (state.time / 60) % 24;
   for (const g of state.guests) {
     if (g.status !== 'in-room' && g.status !== 'party') continue;
     const S = SPECIES[g.species];
-    const asleep = g.status === 'in-room' && (S.nocturnal ? !night && (state.time / 60) % 24 > 9 && (state.time / 60) % 24 < 17 : night);
+    const owlish = S.nocturnal || hasQuirk(g, 'nightowl');
+    const asleep = g.status === 'in-room' && !g.escaped && (owlish ? !night && hour > 9 && hour < 17 : night);
     const f = asleep ? 0.3 : 1;
     g.hunger = clamp(g.hunger - (S.hunger / 60) * dMin * f, 0, 100);
     if (g.status === 'in-room') {
@@ -42,10 +50,15 @@ export function tickGuests(state, dMin, weather) {
       let jf = liked ? 0.55 : decor.length ? 0.8 : 1;
       if (g.toy) jf *= S.toys.includes(g.toy) ? 0.55 : 0.75;
       if (S.rainLover && weather.rain > 0) jf *= 0.5;
+      // quirks
+      if (hasQuirk(g, 'stormy') && weather.rain > 0 && !decor.includes('decor_cushion')) jf *= 2.2;
+      if (hasQuirk(g, 'clingy')) jf *= 1.45;
+      if (hasQuirk(g, 'nightowl') && (hour >= 20 || hour < 2) && state.time - (g.lastPet ?? -999) > 120) jf *= 1.8;
+      if (hasQuirk(g, 'catfoe') && state.guests.some((o) => o !== g && o.species === 'cat' && o.status === 'in-room' && Math.abs(o.room - g.room) === 1)) jf *= 1.6;
       g.joy = clamp(g.joy - (S.joy / 60) * dMin * f * jf, 0, 100);
       if (liked && !asleep) g.joy = clamp(g.joy + (2 / 60) * dMin, 0, 100);
       // messes
-      if (!asleep && Math.random() < (S.mess / 60) * dMin && (room.messes || []).length < MAX_MESS) {
+      if (!asleep && Math.random() < (S.mess * (hasQuirk(g, 'messy') ? 2 : 1) / 60) * dMin && (room.messes || []).length < MAX_MESS) {
         const rb = roomBounds(g.room);
         room.messes ||= [];
         room.messes.push({ x: rb.x0 + 0.5 + Math.random() * (rb.x1 - rb.x0 - 1), z: rb.z0 + 1.2 + Math.random() * (rb.z1 - rb.z0 - 2) });
@@ -64,7 +77,8 @@ export function tickGuests(state, dMin, weather) {
 export function sampleGuests(state) {
   for (const g of state.guests) {
     if (g.status !== 'in-room' && g.status !== 'party') continue;
-    const tidy = g.status === 'in-room' ? 100 - (state.rooms[g.room].messes || []).length * 30 : 100;
+    let tidy = g.status === 'in-room' ? 100 - (state.rooms[g.room].messes || []).length * 30 : 100;
+    if (g.escaped) tidy -= 40;
     const s = g.hunger * 0.4 + g.joy * 0.4 + tidy * 0.2;
     g.sum = (g.sum || 0) + s;
     g.samples = (g.samples || 0) + 1;
@@ -81,6 +95,9 @@ export function actPet(state, g) {
   const since = state.time - (g.lastPet ?? -999);
   const S = SPECIES[g.species];
   let gain = since > 90 ? 14 : 3;
+  if (hasQuirk(g, 'clingy')) gain = Math.round(gain * 1.5);
+  const h = (state.time / 60) % 24;
+  if (hasQuirk(g, 'nightowl') && (h >= 20 || h < 2)) gain += 6;
   g.joy = clamp(g.joy + gain, 0, 100);
   g.lastPet = state.time;
   return { gain, msg: since > 90 ? `${g.name} leans into the scritches.` : `${g.name} is happy, but a little over-cuddled.` };
@@ -91,9 +108,10 @@ export function actFeed(state, g, id) {
   const S = SPECIES[g.species];
   const it = ITEMS[id];
   const isTreat = it.cat === 'treat';
-  const liked = isTreat ? S.treats.includes(id) : S.foods.includes(id);
-  let hunger = isTreat ? 60 : liked ? 32 : 20;
-  let joy = isTreat ? (liked ? 35 : 12) : liked ? 10 : 0;
+  const liked = it.rare || (isTreat ? S.treats.includes(id) : S.foods.includes(id));
+  let hunger = isTreat ? 60 : it.rare ? 45 : liked ? 32 : 20;
+  let joy = isTreat ? (liked ? 35 : 12) : it.rare ? 40 : liked ? 10 : 0;
+  if (hasQuirk(g, 'picky') && !liked) { hunger = 5; joy = -4; }
   g.hunger = clamp(g.hunger + hunger, 0, 100);
   g.joy = clamp(g.joy + joy, 0, 100);
   if (liked) g.favFed = (g.favFed || 0) + 1;
@@ -151,6 +169,8 @@ export function scoreGuest(state, g, lateHome = false) {
   score += Math.min(g.favFed || 0, 3) * 3;
   if ((room.decor || []).some((d) => S.decor.includes(d))) score += 6;
   if (g.toy && S.toys.includes(g.toy)) score += 4;
+  // adventures together (and the odd fright)
+  score += Math.min(2, g.adventures || 0) * 4 - Math.min(2, g.spooked || 0) * 4;
   let stars = score >= 86 ? 5 : score >= 70 ? 4 : score >= 54 ? 3 : score >= 38 ? 2 : 1;
   if (lateHome) stars = Math.max(1, stars - 1);
   const pay = g.rate * g.nights;
@@ -158,7 +178,8 @@ export function scoreGuest(state, g, lateHome = false) {
   let tip = Math.round(pay * tipPct);
   if (g.toy) tip += Math.round(pay * 0.1);
   if (lateHome) tip = 0;
-  const text = pick(REVIEWS[stars]).replace('{pet}', g.name);
+  let text = pick(REVIEWS[stars]).replace('{pet}', g.name);
+  if (g.adventures && stars >= 4) text += ` ${g.name} won't stop telling everyone about their big adventure with you!`;
   return { stars, pay, tip, text, score: Math.round(score) };
 }
 
