@@ -1,6 +1,7 @@
 // Title screen over a live flyover of Maravik at golden hour.
 import { hasSave, wipeSave } from '../game/state.js';
 import { img } from './ui.js';
+import { VERSION_LABEL } from '../version.js';
 
 export class Title {
   constructor(game) {
@@ -22,6 +23,7 @@ export class Title {
         <button class="btn ${saved ? '' : 'primary'}" data-a="new">New game</button>
         <button class="btn" data-a="how">How to play</button>
       </div>
+      <div class="version" title="Version">${VERSION_LABEL}</div>
       <div class="foot">${this.game.isTouch ? 'Stick to move · Act to interact · Fly to take off' : 'WASD / arrows to move · E to interact · F to fly'} · Best with sound on ♪</div>`;
     const start = (fn) => { g.audio.init(); g.audio.setVolumes(0.5, 0.7); fn(); };
     this.el.querySelector('[data-a=new]').onclick = () => start(() => this.newGame(saved));

@@ -1,7 +1,7 @@
 {
   "name": "broom-and-board",
   "private": true,
-  "version": "0.1.0",
+  "version": "2.0.0",
   "description": "A cozy HD-2D pixel-art game about a young witch who runs a pet hotel in a seaside town.",
   "type": "module",
   "scripts": {

@@ -10,6 +10,7 @@ import { freeRooms } from './jobs.js';
 import { speaker } from './townfolk.js';
 import { fmtTime, pick, shuffle } from '../core/util.js';
 import { makeCanvas, ctx2d } from '../gfx/pixel.js';
+import { VERSION_LABEL } from '../version.js';
 
 const h = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
 const needsHTML = (needs, have) => Object.entries(needs).map(([id, n]) => `<span class="need ${have(id) < n ? 'miss' : ''}">${img(id)}${have(id)}/${n}</span>`).join('');
@@ -835,7 +836,7 @@ export class Menus {
             <kbd>I</kbd> bag · <kbd>J</kbd> journal · <kbd>M</kbd> map<br>
             <kbd>Esc</kbd> — menu / close
           </div>
-          <p class="muted" style="font-size:14px">The game saves automatically every morning.</p>
+          <p class="muted" style="font-size:14px">The game saves automatically every morning.<br>Broom &amp; Board ${VERSION_LABEL}</p>
         </div>
       </div>`;
     body.querySelectorAll('input[type=range]').forEach((r) => r.addEventListener('input', () => {
